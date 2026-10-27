@@ -1,17 +1,19 @@
 # app/ui/simulator.py
 #
-# Экран "Тренажёр" — симулятор входящих заявок.
+# Симулятор входящих заявок с консолью команд.
 #
-# Логика:
-# 1. Загружаем пул заявок (15 штук).
-# 2. Выбираем случайную, не повторяя уже пройденные.
-# 3. Показываем карточку заявки (как в CRM).
-# 4. Кнопка "Взять в работу" → начинаем таймер.
-# 5. Пошагово задаём вопросы. При ошибке — возврат к тому же шагу.
-# 6. В конце — решение, таймер останавливается, заявка считается пройденной.
+# Механика:
+# 1. Показываем карточку заявки (как в CRM).
+# 2. "Взять в работу" → открывается консоль, запускается таймер.
+# 3. Панель доступных команд (у каждого кейса свой набор).
+# 4. Нажимаешь команду → в консоли появляется реалистичный вывод.
+# 5. После вывода — вопрос-интерпретация.
+# 6. Правильно → следующая команда. Неправильно → красная плашка, возврат.
+# 7. В конце — заявка закрыта, таймер остановлен.
 
 import json
 import random
+import threading
 from importlib import resources
 
 import flet as ft
@@ -22,26 +24,24 @@ class SimulatorScreen:
         self.page = page
         self.on_back = on_back
 
-        # Загружаем кейсы
         self.all_cases = self._load_cases()
-
-        # Пул непройденных (пока просто копия, потом можно сохранять в SharedPreferences)
         self.remaining_ids = [c["id"] for c in self.all_cases]
 
-        # Текущий кейс и шаг
         self.current_case = None
-        self.current_step = None
-        self.current_step_idx = 0
+        self.current_command = None
+        self.current_command_idx = 0
 
-        # Таймер (секунды)
         self.timer_seconds = 0
         self.timer_running = False
 
-        # Контейнер для контента
+        # Консольный вывод (список строк)
+        self.console_lines = []
+
         self.container = ft.Container(expand=True)
+        self.console_output = None
+        self.timer_text = None
 
     def _load_cases(self) -> list:
-        """Загружает кейсы из assets/cases_simulator.json."""
         try:
             data_file = resources.files("assets").joinpath("cases_simulator.json")
             with data_file.open("r", encoding="utf-8") as f:
@@ -51,23 +51,18 @@ class SimulatorScreen:
             return []
 
     def build(self) -> ft.Control:
-        """Корневой контрол экрана."""
         self._show_next_case()
         return ft.Column(controls=[self.container], expand=True)
 
     # ---------- Экран 1: карточка заявки ----------
 
     def _show_next_case(self):
-        """Берёт случайную непройденную заявку и показывает её карточку."""
-        # Если пул пуст — сбрасываем
         if not self.remaining_ids:
             self.remaining_ids = [c["id"] for c in self.all_cases]
 
-        # Случайная заявка из пула
         case_id = random.choice(self.remaining_ids)
         self.remaining_ids.remove(case_id)
 
-        # Находим кейс по id
         case = next((c for c in self.all_cases if c["id"] == case_id), None)
         if not case:
             self.container.content = ft.Text("Ошибка: заявка не найдена.")
@@ -75,11 +70,11 @@ class SimulatorScreen:
             return
 
         self.current_case = case
-        self.current_step_idx = 0
+        self.current_command_idx = 0
         self.timer_seconds = 0
         self.timer_running = False
+        self.console_lines = []
 
-        # Карточка заявки (как в CRM)
         card = ft.Container(
             content=ft.Column(
                 controls=[
@@ -112,7 +107,6 @@ class SimulatorScreen:
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
-        # Кнопка "Взять в работу"
         take_btn = ft.Button(
             content=ft.Text("Взять в работу →", color=ft.Colors.WHITE, size=16, weight=ft.FontWeight.BOLD),
             bgcolor="#5A00FF",
@@ -136,7 +130,6 @@ class SimulatorScreen:
         self.page.update()
 
     def _row_info(self, label: str, value: str) -> ft.Control:
-        """Строка "Метка: Значение"."""
         return ft.Row(
             controls=[
                 ft.Text(label, size=13, color="#666666", width=90),
@@ -145,65 +138,78 @@ class SimulatorScreen:
             spacing=5,
         )
 
-    # ---------- Экран 2: диагностика ----------
+    # ---------- Экран 2: консоль ----------
 
     def _start_case(self):
-        """Начинаем прохождение заявки."""
         self.timer_running = True
-        self.current_step_idx = 0
+        self.current_command_idx = 0
+        self.console_lines = []
         self._start_timer()
-        self._show_step()
+        self._show_console()
 
     def _start_timer(self):
-        """Запускаем таймер (обновляем каждую секунду)."""
         def tick():
             if self.timer_running:
                 self.timer_seconds += 1
-                # Обновляем индикатор времени
-                if hasattr(self, "timer_text"):
+                if self.timer_text is not None:
                     mins = self.timer_seconds // 60
                     secs = self.timer_seconds % 60
                     self.timer_text.value = f"⏱ {mins:02d}:{secs:02d}"
                     self.page.update()
-                # Планируем следующий тик
-                import threading
                 threading.Timer(1.0, tick).start()
-
-        import threading
         threading.Timer(1.0, tick).start()
 
-    def _show_step(self):
-        """Показывает текущий шаг диагностики."""
-        steps = self.current_case.get("steps", [])
-        if self.current_step_idx >= len(steps):
+    def _show_console(self):
+        commands = self.current_case.get("commands", [])
+        if self.current_command_idx >= len(commands):
             self._show_solution()
             return
 
-        step = steps[self.current_step_idx]
-        self.current_step = step
+        cmd = commands[self.current_command_idx]
+        self.current_command = cmd
 
-        # Если шаг содержит "solution" — это финал
-        if "solution" in step:
+        if cmd.get("is_final"):
             self._show_solution()
             return
 
-        # Заголовок + индикатор прогресса
-        total = len(steps) - 1  # последний шаг — solution
-        progress_text = f"Шаг {self.current_step_idx + 1} из {max(total, 1)}"
+        # Консольный вывод
+        self.console_output = ft.Text(
+            value="\n".join(self.console_lines) if self.console_lines else "> Готов к выполнению команд...",
+            size=12,
+            color="#00FF00",
+            font_family="monospace",
+            selectable=True,
+        )
 
         # Индикатор времени
-        self.timer_text = ft.Text(f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD)
+        self.timer_text = ft.Text(
+            f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}",
+            size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
+        )
 
-        # Вопрос
-        question_text = ft.Text(step["question"], size=16, weight=ft.FontWeight.BOLD, color="#333333")
+        # Панель команд (кнопки)
+        cmd_buttons = []
+        for i, c in enumerate(commands):
+            if i < self.current_command_idx:
+                continue
+            if i > self.current_command_idx:
+                break
+            cmd_buttons.append(
+                ft.Button(
+                    content=ft.Text(f"▶ {c['name']}", size=13, color="#FFFFFF"),
+                    bgcolor="#333333",
+                    width=500,
+                    height=40,
+                    on_click=lambda e, c=c: self._execute_command(c),
+                )
+            )
 
-        # Варианты ответов
-        options_controls = []
-        for opt in step.get("options", []):
-            options_controls.append(self._make_option_button(opt))
+        # Вопрос-интерпретация (появляется после выполнения команды)
+        # Пока не выполнили — не показываем.
+        self.interpret_container = ft.Column(controls=[], spacing=8)
 
-        # Карточка шага
-        card = ft.Container(
+        # Карточка консоли
+        console_card = ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Row(
@@ -213,12 +219,18 @@ class SimulatorScreen:
                             self.timer_text,
                         ],
                     ),
-                    ft.ProgressBar(value=self.current_step_idx / max(total, 1), bgcolor="#E9ECEF", color="#5A00FF"),
-                    ft.Text(progress_text, size=12, color="#666666"),
+                    ft.Container(height=5),
+                    ft.Container(
+                        content=self.console_output,
+                        bgcolor="#1E1E1E",
+                        border_radius=8,
+                        padding=15,
+                        height=200,
+                    ),
                     ft.Container(height=10),
-                    question_text,
-                    ft.Container(height=15),
-                    ft.Column(controls=options_controls, spacing=10),
+                    ft.Text("Доступные команды:", size=13, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Column(controls=cmd_buttons, spacing=8),
+                    self.interpret_container,
                 ],
                 spacing=8,
             ),
@@ -228,33 +240,69 @@ class SimulatorScreen:
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
-        self.container.content = ft.Column(controls=[card], expand=True, scroll=ft.ScrollMode.AUTO)
+        self.container.content = ft.Column(
+            controls=[console_card],
+            expand=True,
+            scroll=ft.ScrollMode.AUTO,
+        )
         self.page.update()
 
-    def _make_option_button(self, opt: dict) -> ft.Control:
-        """Кнопка варианта ответа с обработкой правильно/неправильно."""
-        btn = ft.Button(
-            content=ft.Text(opt["text"], size=14, color="#333333", text_align=ft.TextAlign.LEFT),
-            bgcolor="#F8F9FA",
-            width=500,
-            height=50,
-            on_click=lambda e: self._on_answer(opt),
-        )
-        return btn
+    def _execute_command(self, cmd: dict):
+        """Имитация выполнения команды: вывод в консоль + вопрос."""
+        # Добавляем в консоль заголовок и вывод
+        self.console_lines.append(f"\n> {cmd['name']}")
+        self.console_lines.append(cmd.get("output", "Команда выполнена."))
 
-    def _on_answer(self, opt: dict):
-        """Обработка ответа."""
-        if opt.get("correct"):
-            # Правильно — идём дальше
-            self.current_step_idx += 1
-            self._show_step()
+        if self.console_output is not None:
+            self.console_output.value = "\n".join(self.console_lines)
+            self.page.update()
+
+        # Показываем вопрос-интерпретацию
+        self._show_interpretation(cmd)
+
+    def _show_interpretation(self, cmd: dict):
+        """Показывает вопрос-интерпретацию после выполнения команды."""
+        question = cmd.get("question", "")
+        answers = cmd.get("answers", [])
+
+        if not question or not answers:
+            # Если вопросов нет — идём к следующей команде
+            self.current_command_idx += 1
+            self._show_console()
+            return
+
+        answer_buttons = []
+        for ans in answers:
+            answer_buttons.append(
+                ft.Button(
+                    content=ft.Text(ans["text"], size=13, color="#333333", text_align=ft.TextAlign.LEFT),
+                    bgcolor="#F8F9FA",
+                    width=500,
+                    height=45,
+                    on_click=lambda e, a=ans: self._on_interpret(a),
+                )
+            )
+
+        self.interpret_container.controls = [
+            ft.Divider(height=1, color="#CED4DA"),
+            ft.Text(f"❓ {question}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+            ft.Column(controls=answer_buttons, spacing=8),
+        ]
+        self.page.update()
+
+    def _on_interpret(self, ans: dict):
+        """Обработка ответа на вопрос-интерпретацию."""
+        if ans.get("correct"):
+            # Правильно — переходим к следующей команде
+            self.current_command_idx += 1
+            self.interpret_container.controls = []
+            self._show_console()
         else:
-            # Неправильно — показываем объяснение и остаёмся на шаге
-            explanation = opt.get("explanation", "Неверный ответ.")
+            # Неправильно — красная плашка
             self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"❌ {explanation}", color=ft.Colors.WHITE),
+                content=ft.Text("❌ Неверно. Подумайте ещё раз.", color=ft.Colors.WHITE),
                 bgcolor="#E63946",
-                duration=4000,
+                duration=3000,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -262,19 +310,18 @@ class SimulatorScreen:
     # ---------- Экран 3: решение ----------
 
     def _show_solution(self):
-        """Показывает финальное решение и останавливает таймер."""
         self.timer_running = False
 
-        # Ищем последний шаг с solution
-        steps = self.current_case.get("steps", [])
-        solution_step = None
-        for step in steps:
-            if "solution" in step:
-                solution_step = step
+        # Ищем финальную команду
+        commands = self.current_case.get("commands", [])
+        final_cmd = None
+        for c in commands:
+            if c.get("is_final"):
+                final_cmd = c
                 break
 
-        if not solution_step:
-            solution_step = {"solution": "Решение не найдено.", "recommendation": ""}
+        if not final_cmd:
+            final_cmd = {"name": "Закрыть заявку", "output": "Заявка закрыта."}
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
@@ -292,14 +339,11 @@ class SimulatorScreen:
                     ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
                     ft.Text(f"Время решения: {mins:02d}:{secs:02d}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD),
                     ft.Divider(height=1, color="#CED4DA"),
-                    ft.Text("Решение:", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
-                    ft.Text(solution_step.get("solution", ""), size=14, color="#333333", selectable=True),
-                    ft.Container(height=10),
-                    ft.Text("Рекомендация:", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Text("Финальный шаг:", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
                     ft.Container(
-                        content=ft.Text(solution_step.get("recommendation", ""), size=14, color="#0056B3", selectable=True),
+                        content=ft.Text(final_cmd.get("output", ""), size=13, color="#333333", selectable=True, font_family="monospace"),
                         padding=ft.Padding.all(12),
-                        bgcolor="#E7F1FF",
+                        bgcolor="#1E1E1E",
                         border_radius=8,
                     ),
                 ],
@@ -341,6 +385,4 @@ class SimulatorScreen:
             expand=True,
             scroll=ft.ScrollMode.AUTO,
         )
-        self.page.update()# app/ui/simulator.py
-#
-# Экран "Трена
+        self.page.update()
