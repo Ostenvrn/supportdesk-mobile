@@ -2,14 +2,10 @@
 #
 # Симулятор входящих заявок с консолью команд.
 #
-# Механика:
-# 1. Показываем карточку заявки (как в CRM).
-# 2. "Взять в работу" → открывается консоль, запускается таймер.
-# 3. Панель доступных команд (у каждого кейса свой набор).
-# 4. Нажимаешь команду → в консоли появляется реалистичный вывод.
-# 5. После вывода — вопрос-интерпретация.
-# 6. Правильно → следующая команда. Неправильно → красная плашка, возврат.
-# 7. В конце — заявка закрыта, таймер остановлен.
+# Особенности:
+# - В консоли сначала выводится команда (как в реальном терминале),
+#   затем её вывод.
+# - На финальном экране рекомендации на светлом фоне (не сливаются).
 
 import json
 import random
@@ -28,7 +24,6 @@ class SimulatorScreen:
         self.remaining_ids = [c["id"] for c in self.all_cases]
 
         self.current_case = None
-        self.current_command = None
         self.current_command_idx = 0
 
         self.timer_seconds = 0
@@ -166,49 +161,39 @@ class SimulatorScreen:
             return
 
         cmd = commands[self.current_command_idx]
-        self.current_command = cmd
-
         if cmd.get("is_final"):
             self._show_solution()
             return
 
-        # Консольный вывод
+        # Текст консоли: если пусто — приглашение
+        console_text = "\n".join(self.console_lines) if self.console_lines else "Microsoft Windows [Version 10.0.19045.3803]\n(c) Корпорация Майкрософт. Все права защищены.\n\nC:\\Users\\support>"
+
         self.console_output = ft.Text(
-            value="\n".join(self.console_lines) if self.console_lines else "> Готов к выполнению команд...",
+            value=console_text,
             size=12,
             color="#00FF00",
-            font_family="monospace",
+            font_family="Courier New",
             selectable=True,
         )
 
-        # Индикатор времени
         self.timer_text = ft.Text(
             f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}",
             size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
         )
 
-        # Панель команд (кнопки)
-        cmd_buttons = []
-        for i, c in enumerate(commands):
-            if i < self.current_command_idx:
-                continue
-            if i > self.current_command_idx:
-                break
-            cmd_buttons.append(
-                ft.Button(
-                    content=ft.Text(f"▶ {c['name']}", size=13, color="#FFFFFF"),
-                    bgcolor="#333333",
-                    width=500,
-                    height=40,
-                    on_click=lambda e, c=c: self._execute_command(c),
-                )
+        # Кнопка текущей команды
+        cmd_buttons = [
+            ft.Button(
+                content=ft.Text(f"▶ {cmd['name']}", size=13, color="#FFFFFF"),
+                bgcolor="#333333",
+                width=500,
+                height=40,
+                on_click=lambda e, c=cmd: self._execute_command(c),
             )
+        ]
 
-        # Вопрос-интерпретация (появляется после выполнения команды)
-        # Пока не выполнили — не показываем.
         self.interpret_container = ft.Column(controls=[], spacing=8)
 
-        # Карточка консоли
         console_card = ft.Container(
             content=ft.Column(
                 controls=[
@@ -225,7 +210,7 @@ class SimulatorScreen:
                         bgcolor="#1E1E1E",
                         border_radius=8,
                         padding=15,
-                        height=200,
+                        height=250,
                     ),
                     ft.Container(height=10),
                     ft.Text("Доступные команды:", size=13, weight=ft.FontWeight.BOLD, color="#333333"),
@@ -248,25 +233,27 @@ class SimulatorScreen:
         self.page.update()
 
     def _execute_command(self, cmd: dict):
-        """Имитация выполнения команды: вывод в консоль + вопрос."""
-        # Добавляем в консоль заголовок и вывод
-        self.console_lines.append(f"\n> {cmd['name']}")
-        self.console_lines.append(cmd.get("output", "Команда выполнена."))
+        """Имитация выполнения команды: выводим команду + её результат."""
+        # Добавляем в консоль "ввод" команды (как в терминале) и её вывод.
+        # Формат: "C:\Users\support> <команда>" и следом вывод.
+        prompt_line = f"C:\\Users\\support> {cmd['name']}"
+        output = cmd.get("output", "Команда выполнена.")
+
+        self.console_lines.append(prompt_line)
+        self.console_lines.append(output)
 
         if self.console_output is not None:
-            self.console_output.value = "\n".join(self.console_lines)
+            self.console_output.value = "\n".join(self.console_lines) + "\n\nC:\\Users\\support>"
             self.page.update()
 
         # Показываем вопрос-интерпретацию
         self._show_interpretation(cmd)
 
     def _show_interpretation(self, cmd: dict):
-        """Показывает вопрос-интерпретацию после выполнения команды."""
         question = cmd.get("question", "")
         answers = cmd.get("answers", [])
 
         if not question or not answers:
-            # Если вопросов нет — идём к следующей команде
             self.current_command_idx += 1
             self._show_console()
             return
@@ -291,14 +278,11 @@ class SimulatorScreen:
         self.page.update()
 
     def _on_interpret(self, ans: dict):
-        """Обработка ответа на вопрос-интерпретацию."""
         if ans.get("correct"):
-            # Правильно — переходим к следующей команде
             self.current_command_idx += 1
             self.interpret_container.controls = []
             self._show_console()
         else:
-            # Неправильно — красная плашка
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("❌ Неверно. Подумайте ещё раз.", color=ft.Colors.WHITE),
                 bgcolor="#E63946",
@@ -312,7 +296,6 @@ class SimulatorScreen:
     def _show_solution(self):
         self.timer_running = False
 
-        # Ищем финальную команду
         commands = self.current_case.get("commands", [])
         final_cmd = None
         for c in commands:
@@ -325,6 +308,9 @@ class SimulatorScreen:
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
+
+        # --- Рекомендация на СВЕТЛОМ фоне (чтобы текст не сливался) ---
+        final_output_text = final_cmd.get("output", "")
 
         card = ft.Container(
             content=ft.Column(
@@ -341,9 +327,16 @@ class SimulatorScreen:
                     ft.Divider(height=1, color="#CED4DA"),
                     ft.Text("Финальный шаг:", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
                     ft.Container(
-                        content=ft.Text(final_cmd.get("output", ""), size=13, color="#333333", selectable=True, font_family="monospace"),
+                        content=ft.Text(
+                            final_output_text,
+                            size=13,
+                            color="#333333",          # ТЁМНЫЙ текст
+                            selectable=True,
+                            font_family="Courier New",
+                        ),
                         padding=ft.Padding.all(12),
-                        bgcolor="#1E1E1E",
+                        bgcolor="#F8F9FA",             # СВЕТЛЫЙ фон
+                        border=ft.Border.all(1, "#CED4DA"),
                         border_radius=8,
                     ),
                 ],
