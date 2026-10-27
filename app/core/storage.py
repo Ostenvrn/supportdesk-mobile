@@ -1,50 +1,45 @@
 # app/core/storage.py
 #
-# Модуль хранения профиля и прогресса.
-# Использует SharedPreferences (Flet 1.0.5).
+# Модуль хранения профиля (Flet 1.0.5).
+# SharedPreferences в 1.0 — асинхронный сервис: методы нужно await-ить.
 
 import flet as ft
 
 
-def load_profile() -> str:
+async def load_profile() -> str:
     """
     Загружает имя профиля из SharedPreferences.
     Возвращает "" если профиль не создан.
     """
     try:
         prefs = ft.SharedPreferences()
-        name = prefs.get("profile_name") or ""
-        return str(name)
+        name = await prefs.get("profile_name")
+        return str(name) if name else ""
     except Exception as e:
         print(f"Ошибка загрузки профиля: {e}")
         return ""
 
 
-def save_profile(name: str):
+async def save_profile(name: str):
     """
     Сохраняет имя профиля в SharedPreferences.
     """
     try:
         prefs = ft.SharedPreferences()
-        prefs.set("profile_name", name)
+        await prefs.set("profile_name", name)
     except Exception as e:
         print(f"Ошибка сохранения профиля: {e}")
 
 
-def load_progress() -> dict:
-    """
-    Загружает прогресс (заглушка — пустой словарь).
-    """
+async def load_progress() -> dict:
+    """Заглушка прогресса."""
     return {}
 
 
-def save_progress(progress: dict):
-    """
-    Сохраняет прогресс (заглушка).
-    """
+async def save_progress(progress: dict):
+    """Заглушка сохранения прогресса."""
     try:
         prefs = ft.SharedPreferences()
-        # Пока сохраняем пустую строку (прогресс будет в тренажёре)
-        prefs.set("progress", "{}")
+        await prefs.set("progress", "{}")
     except Exception as e:
         print(f"Ошибка сохранения прогресса: {e}")
