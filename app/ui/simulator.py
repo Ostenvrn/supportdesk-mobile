@@ -3,9 +3,10 @@
 # Симулятор входящих заявок с консолью команд.
 #
 # Особенности:
-# - В консоли сначала выводится команда (как в реальном терминале),
-#   затем её вывод.
-# - На финальном экране рекомендации на светлом фоне (не сливаются).
+# - Всё выровнено по центру.
+# - Консоль уменьшена по высоте, чтобы влезали ответы.
+# - При неправильном ответе кнопка загорается красным.
+# - В консоли сначала команда, потом вывод.
 
 import json
 import random
@@ -29,12 +30,12 @@ class SimulatorScreen:
         self.timer_seconds = 0
         self.timer_running = False
 
-        # Консольный вывод (список строк)
         self.console_lines = []
 
-        self.container = ft.Container(expand=True)
+        self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.console_output = None
         self.timer_text = None
+        self.interpret_buttons = []
 
     def _load_cases(self) -> list:
         try:
@@ -47,7 +48,7 @@ class SimulatorScreen:
 
     def build(self) -> ft.Control:
         self._show_next_case()
-        return ft.Column(controls=[self.container], expand=True)
+        return ft.Column(controls=[self.container], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
     # ---------- Экран 1: карточка заявки ----------
 
@@ -79,6 +80,7 @@ class SimulatorScreen:
                             ft.Text(f"Заявка {case['number']}", size=18, weight=ft.FontWeight.BOLD, color="#333333"),
                         ],
                         spacing=10,
+                        alignment=ft.MainAxisAlignment.CENTER,
                     ),
                     ft.Divider(height=1, color="#CED4DA"),
                     self._row_info("Источник:", case.get("source", "—")),
@@ -99,6 +101,7 @@ class SimulatorScreen:
             bgcolor="#FFFFFF",
             border_radius=14,
             padding=20,
+            width=600,
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
@@ -121,6 +124,7 @@ class SimulatorScreen:
             spacing=10,
             expand=True,
             scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.page.update()
 
@@ -165,7 +169,6 @@ class SimulatorScreen:
             self._show_solution()
             return
 
-        # Текст консоли: если пусто — приглашение
         console_text = "\n".join(self.console_lines) if self.console_lines else "Microsoft Windows [Version 10.0.19045.3803]\n(c) Корпорация Майкрософт. Все права защищены.\n\nC:\\Users\\support>"
 
         self.console_output = ft.Text(
@@ -181,10 +184,9 @@ class SimulatorScreen:
             size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
         )
 
-        # Кнопка текущей команды
         cmd_buttons = [
             ft.Button(
-                content=ft.Text(f"▶ {cmd['name']}", size=13, color="#FFFFFF"),
+                content=ft.Text(f"▶ Выполнить: {cmd['name']}", size=13, color="#FFFFFF"),
                 bgcolor="#333333",
                 width=500,
                 height=40,
@@ -193,6 +195,7 @@ class SimulatorScreen:
         ]
 
         self.interpret_container = ft.Column(controls=[], spacing=8)
+        self.interpret_buttons = []
 
         console_card = ft.Container(
             content=ft.Column(
@@ -210,11 +213,12 @@ class SimulatorScreen:
                         bgcolor="#1E1E1E",
                         border_radius=8,
                         padding=15,
-                        height=250,
+                        height=180,   # Уменьшили высоту
+                        width=600,
                     ),
                     ft.Container(height=10),
                     ft.Text("Доступные команды:", size=13, weight=ft.FontWeight.BOLD, color="#333333"),
-                    ft.Column(controls=cmd_buttons, spacing=8),
+                    ft.Column(controls=cmd_buttons, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     self.interpret_container,
                 ],
                 spacing=8,
@@ -222,6 +226,7 @@ class SimulatorScreen:
             bgcolor="#FFFFFF",
             border_radius=14,
             padding=20,
+            width=650,
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
@@ -229,13 +234,11 @@ class SimulatorScreen:
             controls=[console_card],
             expand=True,
             scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.page.update()
 
     def _execute_command(self, cmd: dict):
-        """Имитация выполнения команды: выводим команду + её результат."""
-        # Добавляем в консоль "ввод" команды (как в терминале) и её вывод.
-        # Формат: "C:\Users\support> <команда>" и следом вывод.
         prompt_line = f"C:\\Users\\support> {cmd['name']}"
         output = cmd.get("output", "Команда выполнена.")
 
@@ -246,7 +249,6 @@ class SimulatorScreen:
             self.console_output.value = "\n".join(self.console_lines) + "\n\nC:\\Users\\support>"
             self.page.update()
 
-        # Показываем вопрос-интерпретацию
         self._show_interpretation(cmd)
 
     def _show_interpretation(self, cmd: dict):
@@ -258,17 +260,18 @@ class SimulatorScreen:
             self._show_console()
             return
 
+        self.interpret_buttons = []
         answer_buttons = []
         for ans in answers:
-            answer_buttons.append(
-                ft.Button(
-                    content=ft.Text(ans["text"], size=13, color="#333333", text_align=ft.TextAlign.LEFT),
-                    bgcolor="#F8F9FA",
-                    width=500,
-                    height=45,
-                    on_click=lambda e, a=ans: self._on_interpret(a),
-                )
+            btn = ft.Button(
+                content=ft.Text(ans["text"], size=13, color="#333333", text_align=ft.TextAlign.LEFT),
+                bgcolor="#F8F9FA",
+                width=500,
+                height=45,
+                on_click=lambda e, a=ans: self._on_interpret(a, e.control),
             )
+            self.interpret_buttons.append(btn)
+            answer_buttons.append(btn)
 
         self.interpret_container.controls = [
             ft.Divider(height=1, color="#CED4DA"),
@@ -277,18 +280,16 @@ class SimulatorScreen:
         ]
         self.page.update()
 
-    def _on_interpret(self, ans: dict):
+    def _on_interpret(self, ans: dict, button: ft.Control):
         if ans.get("correct"):
             self.current_command_idx += 1
             self.interpret_container.controls = []
+            self.interpret_buttons = []
             self._show_console()
         else:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("❌ Неверно. Подумайте ещё раз.", color=ft.Colors.WHITE),
-                bgcolor="#E63946",
-                duration=3000,
-            )
-            self.page.snack_bar.open = True
+            # Неправильно — кнопка становится красной
+            button.bgcolor = "#E63946"
+            button.content.color = ft.Colors.WHITE
             self.page.update()
 
     # ---------- Экран 3: решение ----------
@@ -304,12 +305,11 @@ class SimulatorScreen:
                 break
 
         if not final_cmd:
-            final_cmd = {"name": "Закрыть заявку", "output": "Заявка закрыта."}
+            final_cmd = {"name": "close_ticket", "output": "Заявка закрыта."}
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
 
-        # --- Рекомендация на СВЕТЛОМ фоне (чтобы текст не сливался) ---
         final_output_text = final_cmd.get("output", "")
 
         card = ft.Container(
@@ -321,6 +321,7 @@ class SimulatorScreen:
                             ft.Text("Заявка закрыта!", size=20, weight=ft.FontWeight.BOLD, color="#333333"),
                         ],
                         spacing=10,
+                        alignment=ft.MainAxisAlignment.CENTER,
                     ),
                     ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
                     ft.Text(f"Время решения: {mins:02d}:{secs:02d}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD),
@@ -330,21 +331,24 @@ class SimulatorScreen:
                         content=ft.Text(
                             final_output_text,
                             size=13,
-                            color="#333333",          # ТЁМНЫЙ текст
+                            color="#333333",
                             selectable=True,
                             font_family="Courier New",
                         ),
                         padding=ft.Padding.all(12),
-                        bgcolor="#F8F9FA",             # СВЕТЛЫЙ фон
+                        bgcolor="#F8F9FA",
                         border=ft.Border.all(1, "#CED4DA"),
                         border_radius=8,
+                        width=550,
                     ),
                 ],
                 spacing=8,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             bgcolor="#FFFFFF",
             border_radius=14,
             padding=20,
+            width=600,
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
@@ -377,5 +381,6 @@ class SimulatorScreen:
             spacing=10,
             expand=True,
             scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
         self.page.update()
