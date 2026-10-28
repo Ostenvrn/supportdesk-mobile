@@ -1,13 +1,13 @@
 # app.py
 #
 # Точка входа SupportDesk Mobile (Flet 1.0.5).
-# Главный экран + Справочник + Тренажёр + Прогресс + Профиль.
+# Главный экран + Справочник + Тренажёр + Прогресс + Профиль + Тёмная тема.
 
 import flet as ft
 import flet.canvas as cv
 
 import app.state as state
-from app.core.storage import load_profile, save_profile
+from app.core.storage import load_profile, save_profile, load_theme, save_theme
 from app.ui.screens import KnowledgeScreen, SimulatorSelectionScreen
 from app.ui.simulator import SimulatorScreen
 from app.ui.progress import ProgressScreen
@@ -71,8 +71,16 @@ def build_background() -> ft.Control:
 
 async def main(page: ft.Page):
     page.title = "SupportDesk Mobile"
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.bgcolor = "#F4F6F9"
+    
+    # Загружаем тему
+    is_dark = await load_theme()
+    if is_dark:
+        page.theme_mode = ft.ThemeMode.DARK
+        page.bgcolor = "#121212"
+    else:
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.bgcolor = "#F4F6F9"
+
     page.padding = 20
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
@@ -134,7 +142,6 @@ async def main(page: ft.Page):
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 elif section == "Тренажёры":
-                    # Открываем экран выбора уровня
                     def start_sim(level: int, is_advanced: bool):
                         sim = SimulatorScreen(page, on_back=show_main_screen, level=level, is_advanced=is_advanced)
                         body = sim.build()
@@ -163,7 +170,51 @@ async def main(page: ft.Page):
                     page.run_task(load_progress_screen)
 
                 elif section == "Профиль":
-                    body = ProfileScreen(page).build()
+                    # Экран профиля с переключателем темы
+                    async def toggle_theme(e):
+                        is_dark = e.control.value
+                        await save_theme(is_dark)
+                        if is_dark:
+                            page.theme_mode = ft.ThemeMode.DARK
+                            page.bgcolor = "#121212"
+                        else:
+                            page.theme_mode = ft.ThemeMode.LIGHT
+                            page.bgcolor = "#F4F6F9"
+                        page.update()
+
+                    theme_switch = ft.Switch(
+                        label="Тёмная тема",
+                        value=page.theme_mode == ft.ThemeMode.DARK,
+                        on_change=toggle_theme,
+                        active_color="#5A00FF",
+                    )
+
+                    name_input = ft.TextField(label="Имя пользователя", value=state.profile_name, width=300)
+
+                    async def save_name(e):
+                        new_name = name_input.value.strip()
+                        if new_name:
+                            state.profile_name = new_name
+                            await save_profile(new_name)
+                            page.snack_bar = ft.SnackBar(ft.Text("Имя сохранено!"))
+                            page.snack_bar.open = True
+                            page.update()
+
+                    save_btn = ft.Button("Сохранить имя", bgcolor="#5A00FF", color="#FFFFFF", on_click=save_name, width=300)
+
+                    body = ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.PERSON, size=80, color="#5A00FF"),
+                            ft.Container(height=10),
+                            name_input,
+                            save_btn,
+                            ft.Divider(),
+                            theme_switch,
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=15,
+                    )
+
                     back_btn = ft.TextButton(
                         content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
                         on_click=lambda e: show_main_screen(),

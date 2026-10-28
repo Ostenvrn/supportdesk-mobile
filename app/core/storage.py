@@ -1,14 +1,12 @@
 # app/core/storage.py
 #
-# Модуль хранения профиля и прогресса (Flet 1.0.5).
-# Использует SharedPreferences.
+# Модуль хранения профиля, прогресса и темы.
 
 import json
 import flet as ft
 
 
 async def load_profile() -> str:
-    """Загружает имя профиля."""
     try:
         prefs = ft.SharedPreferences()
         name = await prefs.get("profile_name")
@@ -19,7 +17,6 @@ async def load_profile() -> str:
 
 
 async def save_profile(name: str):
-    """Сохраняет имя профиля."""
     try:
         prefs = ft.SharedPreferences()
         await prefs.set("profile_name", name)
@@ -28,10 +25,6 @@ async def save_profile(name: str):
 
 
 async def load_progress() -> dict:
-    """
-    Загружает прогресс из SharedPreferences (в виде JSON-строки).
-    Возвращает словарь {case_id: {"status": "passed", "time": 45}}.
-    """
     try:
         prefs = ft.SharedPreferences()
         raw = await prefs.get("progress_data")
@@ -44,9 +37,27 @@ async def load_progress() -> dict:
 
 
 async def save_progress(progress: dict):
-    """Сохраняет прогресс в виде JSON-строки."""
     try:
         prefs = ft.SharedPreferences()
         await prefs.set("progress_data", json.dumps(progress))
     except Exception as e:
         print(f"Ошибка сохранения прогресса: {e}")
+
+
+async def load_theme() -> bool:
+    """Загружает настройку тёмной темы."""
+    try:
+        prefs = ft.SharedPreferences()
+        is_dark = await prefs.get("dark_theme")
+        return bool(is_dark)
+    except Exception:
+        return False
+
+
+async def save_theme(is_dark: bool):
+    """Сохраняет настройку тёмной темы."""
+    try:
+        prefs = ft.SharedPreferences()
+        await prefs.set("dark_theme", is_dark)
+    except Exception as e:
+        print(f"Ошибка сохранения темы: {e}")
