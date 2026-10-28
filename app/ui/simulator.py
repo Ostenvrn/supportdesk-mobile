@@ -3,9 +3,7 @@
 # Симулятор входящих заявок с консолью команд.
 #
 # Новое:
-# - Кнопка "Посмотреть заявку" в режиме диагностики (открывает BottomSheet с деталями).
-# - Сохранение прогресса.
-# - Автоскроллинг консоли.
+# - Исправлено закрытие BottomSheet для Flet 1.0.5 (page.pop_dialog).
 
 import json
 import random
@@ -44,7 +42,6 @@ class SimulatorScreen:
         self.timer_text = None
 
     def _load_all_cases(self) -> list:
-        """Загружает кейсы из основного и дополнительного JSON-файлов."""
         cases = []
         try:
             data_file = resources.files("assets").joinpath("cases_simulator.json")
@@ -212,7 +209,8 @@ class SimulatorScreen:
                             "Понятно, закрыть",
                             bgcolor="#5A00FF",
                             color=ft.Colors.WHITE,
-                            on_click=lambda _: self.page.close(bs)
+                            # ИСПРАВЛЕНИЕ: используем pop_dialog() для Flet 1.0.5
+                            on_click=lambda _: self.page.pop_dialog()
                         )
                     ],
                     tight=True,
@@ -221,8 +219,8 @@ class SimulatorScreen:
             ),
             open=True,
         )
-        self.page.overlay.append(bs)
-        self.page.update()
+        # В Flet 1.0.5 используем show_dialog для отображения
+        self.page.show_dialog(bs)
 
     def _show_console(self):
         commands = self.current_case.get("commands", [])
@@ -311,7 +309,6 @@ class SimulatorScreen:
         self.interpret_container = ft.Column(controls=[], spacing=8)
         self.interpret_buttons = []
 
-        # Верхняя панель с кнопкой "Посмотреть заявку"
         top_panel = ft.Row(
             controls=[
                 ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
