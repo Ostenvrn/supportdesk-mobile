@@ -8,5 +8,7 @@ requires-python = ">=3.12"
 product = "SupportDesk Mobile"
 org = "com.ostenvrn"
 build_number = 1
-# Указываем Flet, что точка входа — это файл app.py, а не папка app
+
+# Вот она, правильная секция для точки входа:
+[tool.flet.app]
 module = "app.py"
