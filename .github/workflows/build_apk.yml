@@ -22,9 +22,8 @@ jobs:
 
       - name: Build APK
         run: |
-          # --yes автоматически отвечает "y" на установку Flutter SDK
-          # --verbose выводит подробный лог (полезно при ошибках)
-          flet build apk --module-name app --yes --verbose
+          # Теперь Flet сам найдет main.py, флаг --module-name не нужен
+          flet build apk --yes --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
