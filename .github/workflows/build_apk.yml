@@ -12,24 +12,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Устанавливаем uv (менеджер пакетов, который использует экшен)
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      # Запускаем официальный экшен БЕЗ ручной установки flet-cli
-      - name: Build APK with Flet
-        id: build
-        uses: flet-dev/flet-build-action@v1
-        with:
-          target: apk
-          runner-python-version: "3.12"
-          bundled-python-version: "3.12"
-          build-number: ${{ github.run_number }}
+      - name: Install flet-cli
+        run: |
+          uv tool install --with flet-cli flet
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Upload APK Artifact
+      - name: Build APK
+        run: |
+          flet build apk --module-name app --verbose
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: supportdesk-apk
-          path: ${{ steps.build.outputs.archive-path }}
-          archive: false
+          path: build/apk/*.apk
           if-no-files-found: error
