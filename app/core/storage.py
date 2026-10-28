@@ -45,7 +45,6 @@ async def save_progress(progress: dict):
 
 
 async def load_theme() -> bool:
-    """Загружает настройку тёмной темы."""
     try:
         prefs = ft.SharedPreferences()
         is_dark = await prefs.get("dark_theme")
@@ -55,9 +54,19 @@ async def load_theme() -> bool:
 
 
 async def save_theme(is_dark: bool):
-    """Сохраняет настройку тёмной темы."""
     try:
         prefs = ft.SharedPreferences()
         await prefs.set("dark_theme", is_dark)
     except Exception as e:
         print(f"Ошибка сохранения темы: {e}")
+
+
+async def reset_all_data():
+    """Сбрасывает профиль, прогресс и тему."""
+    try:
+        prefs = ft.SharedPreferences()
+        await prefs.set("profile_name", "")
+        await prefs.set("progress_data", "{}")
+        await prefs.set("dark_theme", False)
+    except Exception as e:
+        print(f"Ошибка сброса данных: {e}")

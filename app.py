@@ -1,17 +1,18 @@
 # app.py
 #
 # Точка входа SupportDesk Mobile (Flet 1.0.5).
-# Главный экран + Справочник + Тренажёр + Прогресс + Профиль + Тёмная тема.
+# Главный экран + Справочник + Тренажёр + Прогресс + Профиль + О программе.
 
 import flet as ft
 import flet.canvas as cv
 
 import app.state as state
-from app.core.storage import load_profile, save_profile, load_theme, save_theme
+from app.core.storage import load_profile, save_profile, load_theme, load_progress
 from app.ui.screens import KnowledgeScreen, SimulatorSelectionScreen
 from app.ui.simulator import SimulatorScreen
 from app.ui.progress import ProgressScreen
 from app.ui.profile import ProfileScreen
+from app.ui.about import AboutScreen
 
 
 def build_logo(size: int = 80) -> ft.Control:
@@ -72,7 +73,6 @@ def build_background() -> ft.Control:
 async def main(page: ft.Page):
     page.title = "SupportDesk Mobile"
     
-    # Загружаем тему
     is_dark = await load_theme()
     if is_dark:
         page.theme_mode = ft.ThemeMode.DARK
@@ -130,20 +130,24 @@ async def main(page: ft.Page):
         )
         set_screen(screen)
 
-    def show_main_screen():
+    async def show_main_screen():
+        # Загружаем прогресс для отображения счетчика
+        progress = await load_progress()
+        solved_count = len([k for k in progress.keys() if not k.startswith("__")])
+
         def open_section(section: str):
             try:
                 if section == "Справочник":
                     body = KnowledgeScreen(page).build()
                     back_btn = ft.TextButton(
                         content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
-                        on_click=lambda e: show_main_screen(),
+                        on_click=lambda e: page.run_task(show_main_screen),
                     )
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 elif section == "Тренажёры":
                     def start_sim(level: int, is_advanced: bool):
-                        sim = SimulatorScreen(page, on_back=show_main_screen, level=level, is_advanced=is_advanced)
+                        sim = SimulatorScreen(page, on_back=lambda: page.run_task(show_main_screen), level=level, is_advanced=is_advanced)
                         body = sim.build()
                         back_btn = ft.TextButton(
                             content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("К выбору тренажёра", color="#5A00FF", size=14)], spacing=5),
@@ -154,7 +158,7 @@ async def main(page: ft.Page):
                     body = SimulatorSelectionScreen(page, on_start_simulator=start_sim).build()
                     back_btn = ft.TextButton(
                         content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
-                        on_click=lambda e: show_main_screen(),
+                        on_click=lambda e: page.run_task(show_main_screen),
                     )
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
@@ -164,60 +168,24 @@ async def main(page: ft.Page):
                         body = await progress_screen.build()
                         back_btn = ft.TextButton(
                             content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
-                            on_click=lambda e: show_main_screen(),
+                            on_click=lambda e: page.run_task(show_main_screen),
                         )
                         set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
                     page.run_task(load_progress_screen)
 
                 elif section == "Профиль":
-                    # Экран профиля с переключателем темы
-                    async def toggle_theme(e):
-                        is_dark = e.control.value
-                        await save_theme(is_dark)
-                        if is_dark:
-                            page.theme_mode = ft.ThemeMode.DARK
-                            page.bgcolor = "#121212"
-                        else:
-                            page.theme_mode = ft.ThemeMode.LIGHT
-                            page.bgcolor = "#F4F6F9"
-                        page.update()
-
-                    theme_switch = ft.Switch(
-                        label="Тёмная тема",
-                        value=page.theme_mode == ft.ThemeMode.DARK,
-                        on_change=toggle_theme,
-                        active_color="#5A00FF",
-                    )
-
-                    name_input = ft.TextField(label="Имя пользователя", value=state.profile_name, width=300)
-
-                    async def save_name(e):
-                        new_name = name_input.value.strip()
-                        if new_name:
-                            state.profile_name = new_name
-                            await save_profile(new_name)
-                            page.snack_bar = ft.SnackBar(ft.Text("Имя сохранено!"))
-                            page.snack_bar.open = True
-                            page.update()
-
-                    save_btn = ft.Button("Сохранить имя", bgcolor="#5A00FF", color="#FFFFFF", on_click=save_name, width=300)
-
-                    body = ft.Column(
-                        controls=[
-                            ft.Icon(ft.Icons.PERSON, size=80, color="#5A00FF"),
-                            ft.Container(height=10),
-                            name_input,
-                            save_btn,
-                            ft.Divider(),
-                            theme_switch,
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=15,
-                    )
-
+                    body = ProfileScreen(page).build()
                     back_btn = ft.TextButton(
                         content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
-                        on_click=lambda e: show_main_screen(),
+                        on_click=lambda e: page.run_task(show_main_screen),
+                    )
+                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+
+                elif section == "О программе":
+                    body = AboutScreen(page, on_back=lambda: page.run_task(show_main_screen)).build()
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
+                        on_click=lambda e: page.run_task(show_main_screen),
                     )
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
@@ -231,7 +199,7 @@ async def main(page: ft.Page):
                     controls=[
                         ft.Icon(ft.Icons.ERROR, color="red", size=50),
                         ft.Text(f"Ошибка: {ex}", color="red", selectable=True),
-                        ft.TextButton("Назад", on_click=lambda e: show_main_screen()),
+                        ft.TextButton("Назад", on_click=lambda e: page.run_task(show_main_screen)),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 )
@@ -257,6 +225,7 @@ async def main(page: ft.Page):
                 make_card("Тренажёры", "L1, L2, L3 — выбор уровня", ft.Icons.SCHOOL, "#5A00FF", "Тренажёры"),
                 make_card("Прогресс", "Статистика обучения", ft.Icons.BAR_CHART, "#5A00FF", "Прогресс"),
                 make_card("Профиль", "Настройки пользователя", ft.Icons.PERSON, "#5A00FF", "Профиль"),
+                make_card("О программе", "Информация об авторе и версии", ft.Icons.INFO, "#5A00FF", "О программе"),
             ],
             spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO, expand=True,
         )
@@ -265,6 +234,7 @@ async def main(page: ft.Page):
             controls=[
                 build_logo(70), ft.Container(height=10),
                 ft.Text(f"👋 Привет, {state.profile_name}!", size=22, weight=ft.FontWeight.BOLD),
+                ft.Text(f"Решено заявок: {solved_count}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD),
                 ft.Text("Выбери раздел, чтобы начать", size=13, color="#666666"),
                 ft.Container(height=20), cards_column,
             ],
@@ -276,7 +246,7 @@ async def main(page: ft.Page):
 
     page.add(switcher)
     if state.profile_created:
-        show_main_screen()
+        page.run_task(show_main_screen)
     else:
         show_profile_screen()
 
