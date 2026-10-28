@@ -1,6 +1,7 @@
 # app/ui/quiz.py
 #
 # Экран тестирования (L1, L2, L3).
+# Тест состоит из 20 случайных вопросов.
 
 import json
 import random
@@ -20,7 +21,6 @@ class QuizScreen:
         self.questions = self._load_questions()
         self.current_idx = 0
         self.correct_answers = 0
-        self.selected_answers = [] # Для отладки
 
         self.timer_seconds = 0
         self.timer_running = True
@@ -29,7 +29,7 @@ class QuizScreen:
         self.timer_text = None
 
     def _load_questions(self) -> list:
-        """Загружает вопросы для текущего уровня."""
+        """Загружает 20 случайных вопросов для текущего уровня."""
         try:
             data_file = resources.files("assets").joinpath("quiz_questions.json")
             with data_file.open("r", encoding="utf-8") as f:
@@ -37,9 +37,9 @@ class QuizScreen:
             
             # Фильтруем по уровню
             filtered = [q for q in all_q if q["level"] == self.level]
-            # Перемешиваем
+            # Перемешиваем и берем 20 (или меньше, если в пуле мало вопросов)
             random.shuffle(filtered)
-            return filtered
+            return filtered[:20]
         except Exception as e:
             print(f"Ошибка загрузки вопросов: {e}")
             return []
@@ -72,7 +72,6 @@ class QuizScreen:
 
         q = self.questions[self.current_idx]
 
-        # Индикатор прогресса
         progress_text = f"Вопрос {self.current_idx + 1} из {len(self.questions)}"
         
         self.timer_text = ft.Text(
@@ -80,7 +79,6 @@ class QuizScreen:
             size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
         )
 
-        # Кнопки ответов
         answer_buttons = []
         for idx, opt in enumerate(q["options"]):
             btn = ft.Button(
@@ -148,31 +146,31 @@ class QuizScreen:
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
 
-        # Оценка
-        score = int((self.correct_answers / len(self.questions)) * 100)
-        if score >= 90:
-            grade = "Отлично! 🏆"
+        # Логика оценки: проходной балл 15 из 20
+        passed = self.correct_answers >= 15
+        
+        if passed:
+            grade = "Тест сдан! 🏆"
             color = "#00A896"
-        elif score >= 75:
-            grade = "Хорошо! 👍"
-            color = "#5A00FF"
-        elif score >= 50:
-            grade = "Удовлетворительно. 📖"
-            color = "#F4A261"
+            icon = ft.Icons.CHECK_CIRCLE
         else:
-            grade = "Нужно повторить материал. 📚"
+            grade = "Тест не сдан. 📚"
             color = "#E63946"
+            icon = ft.Icons.CANCEL
+
+        score_percent = int((self.correct_answers / len(self.questions)) * 100)
 
         card = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Icon(ft.Icons.EMOJI_EVENTS, size=60, color=color),
+                    ft.Icon(icon=icon, size=60, color=color),
                     ft.Text("Тест завершён!", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
                     ft.Container(height=10),
                     ft.Text(f"Правильных ответов: {self.correct_answers} из {len(self.questions)}", size=18),
-                    ft.Text(f"Результат: {score}%", size=20, weight=ft.FontWeight.BOLD, color=color),
-                    ft.Text(grade, size=16, color=color),
+                    ft.Text(f"Результат: {score_percent}%", size=20, weight=ft.FontWeight.BOLD, color=color),
+                    ft.Text(grade, size=16, color=color, weight=ft.FontWeight.BOLD),
                     ft.Divider(),
+                    ft.Text(f"Проходной балл: 15 из 20", size=14, color="#666666"),
                     ft.Text(f"Затраченное время: {mins:02d}:{secs:02d}", size=14, color="#666666"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
