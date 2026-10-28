@@ -9,6 +9,8 @@ product = "SupportDesk Mobile"
 org = "com.ostenvrn"
 build_number = 1
 
-# Вот она, правильная секция для точки входа:
 [tool.flet.app]
+# Указываем, что код приложения лежит в корне проекта
+path = "."
+# И что точка входа — это файл app.py
 module = "app.py"
