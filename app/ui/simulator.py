@@ -1,9 +1,6 @@
 # app/ui/simulator.py
 #
 # Симулятор входящих заявок с консолью команд.
-#
-# Новое:
-# - Сохранение прогресса в SharedPreferences.
 
 import json
 import random
@@ -11,8 +8,6 @@ import threading
 from importlib import resources
 
 import flet as ft
-
-# Добавили импорт для сохранения прогресса
 from app.core.storage import load_progress, save_progress
 
 
@@ -22,7 +17,9 @@ class SimulatorScreen:
         self.on_back = on_back
         self.is_advanced = is_advanced
 
-        self.all_cases = self._load_cases()
+        # Загружаем кейсы из обоих файлов
+        self.all_cases = self._load_all_cases()
+
         if self.is_advanced:
             self.all_cases = [c for c in self.all_cases if c.get("advanced")]
         else:
@@ -42,14 +39,28 @@ class SimulatorScreen:
         self.console_list = None
         self.timer_text = None
 
-    def _load_cases(self) -> list:
+    def _load_all_cases(self) -> list:
+        """Загружает кейсы из основного и дополнительного JSON-файлов."""
+        cases = []
+        
+        # Загружаем основной файл
         try:
             data_file = resources.files("assets").joinpath("cases_simulator.json")
             with data_file.open("r", encoding="utf-8") as f:
-                return json.load(f).get("cases", [])
+                cases.extend(json.load(f).get("cases", []))
         except Exception as e:
-            print(f"Ошибка загрузки кейсов: {e}")
-            return []
+            print(f"Ошибка загрузки основного файла кейсов: {e}")
+
+        # Загружаем дополнительный файл (если есть)
+        try:
+            extra_file = resources.files("assets").joinpath("cases_advanced_batch.json")
+            with extra_file.open("r", encoding="utf-8") as f:
+                cases.extend(json.load(f).get("cases", []))
+        except Exception as e:
+            # Если файла нет — просто пропускаем (не выводим ошибку, это нормально)
+            pass
+            
+        return cases
 
     def build(self) -> ft.Control:
         self._show_next_case()
