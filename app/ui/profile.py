@@ -3,6 +3,7 @@
 import flet as ft
 import app.state as state
 from app.core.storage import save_profile, reset_all_data, load_quiz_results
+from app.ui.theme_colors import text_primary, text_secondary, text_accent, text_error, bg_card
 
 
 class ProfileScreen:
@@ -15,8 +16,10 @@ class ProfileScreen:
             label="Имя пользователя",
             value=state.profile_name,
             width=300,
-            border_color="#5A00FF",
-            focused_border_color="#5A00FF",
+            border_color=text_accent(self.page),
+            focused_border_color=text_accent(self.page),
+            color=text_primary(self.page),
+            label_style=ft.TextStyle(color=text_secondary(self.page))
         )
 
         success_text = ft.Text("", color="#00A896", size=14, weight=ft.FontWeight.BOLD, visible=False)
@@ -44,27 +47,27 @@ class ProfileScreen:
             on_click=save_name,
         )
 
-        # --- История тестов (Асинхронный блок) ---
+        # --- История тестов ---
         quiz_history_container = ft.Column()
 
         async def load_history():
             history = await load_quiz_results()
             if not history:
-                quiz_history_container.controls = [ft.Text("Вы ещё не проходили тесты.", color="#666666", italic=True)]
+                quiz_history_container.controls = [ft.Text("Вы ещё не проходили тесты.", color=text_secondary(self.page), italic=True)]
             else:
-                for res in reversed(history[-5:]): # Последние 5
+                for res in reversed(history[-5:]):
                     quiz_history_container.controls.append(
                         ft.Container(
                             content=ft.Row(
                                 controls=[
-                                    ft.Text(f"L{res['level']}", size=14, weight=ft.FontWeight.BOLD, color="#5A00FF"),
-                                    ft.Text(f"{res['date']}", size=12, color="#666666"),
+                                    ft.Text(f"L{res['level']}", size=14, weight=ft.FontWeight.BOLD, color=text_accent(self.page)),
+                                    ft.Text(f"{res['date']}", size=12, color=text_secondary(self.page)),
                                     ft.Container(expand=True),
-                                    ft.Text(f"{res['correct']}/{res['total']}", size=14, weight=ft.FontWeight.BOLD),
+                                    ft.Text(f"{res['correct']}/{res['total']}", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                                 ]
                             ),
                             padding=10,
-                            bgcolor="#F8F9FA",
+                            bgcolor=bg_card(self.page),
                             border_radius=8,
                         )
                     )
@@ -127,9 +130,9 @@ class ProfileScreen:
 
         self.container.content = ft.Column(
             controls=[
-                ft.Text("Профиль", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                ft.Text("Профиль", size=22, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                 ft.Container(height=10),
-                ft.Icon(icon=ft.Icons.PERSON, size=80, color="#5A00FF"),
+                ft.Icon(icon=ft.Icons.PERSON, size=80, color=text_accent(self.page)),
                 ft.Container(height=10),
                 name_input,
                 ft.Container(height=10),
@@ -139,7 +142,7 @@ class ProfileScreen:
                 ft.Divider(),
                 theme_switch,
                 ft.Divider(),
-                ft.Text("Последние тесты:", size=16, weight=ft.FontWeight.BOLD),
+                ft.Text("Последние тесты:", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                 quiz_history_container,
                 ft.Container(height=20),
                 reset_btn,

@@ -8,7 +8,6 @@ from importlib import resources
 import flet as ft
 from app.core.storage import load_progress, save_progress
 from app.core.achievements import check_achievements, save_achievements
-# Импортируем функции цветов
 from app.ui.theme_colors import (
     text_primary, text_secondary, text_accent, text_error, 
     bg_card, bg_card_alt, border_color
@@ -200,7 +199,6 @@ class SimulatorScreen:
         balance = billing.get("balance", "0.00 руб.")
         services = billing.get("services", "—")
 
-        # Цвета для CRM
         crm_content = ft.Column(
             controls=[
                 ft.Text("💳 Биллинг / CRM", size=18, weight=ft.FontWeight.BOLD, color=text_accent(self.page)),
@@ -529,7 +527,7 @@ class SimulatorScreen:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"🏆 Получены достижения: {ach_names}", color=ft.Colors.WHITE),
                     bgcolor="#5A00FF",
-                    duration=5000,
+                    duration=2000, # 2 секунды
                 )
                 self.page.snack_bar.open = True
                 self.page.update()

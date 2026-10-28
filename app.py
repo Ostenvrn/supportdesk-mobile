@@ -12,27 +12,32 @@ from app.ui.simulator import SimulatorScreen
 from app.ui.progress import ProgressScreen
 from app.ui.profile import ProfileScreen
 from app.ui.about import AboutScreen
-from app.ui.quiz import QuizScreen # Импорт экрана тестов
+from app.ui.quiz import QuizScreen
+from app.ui.theme_colors import (
+    text_primary, text_secondary, text_accent, text_error, bg_primary, bg_card, bg_card_alt
+)
 
 
-def build_logo(size: int = 80) -> ft.Control:
-    # ... (код без изменений) ...
+def build_logo(size: int = 80, page: ft.Page = None) -> ft.Control:
     s = size
+    accent = text_accent(page) if page else "#5A00FF"
+    bg = bg_card(page) if page else "#FFFFFF"
+    
     return ft.Stack(width=s, height=s, controls=[
-        ft.Container(width=s, height=s, border_radius=s // 2, bgcolor="#5A00FF", opacity=0.12),
-        ft.Container(width=s * 0.7, height=s * 0.75, left=s * 0.15, top=s * 0.08, bgcolor="#FFFFFF", border=ft.Border.all(3, "#5A00FF"), border_radius=ft.BorderRadius.only(top_left=(s * 0.7) // 2, top_right=(s * 0.7) // 2, bottom_left=(s * 0.7) // 2, bottom_right=(s * 0.7) // 2)),
-        ft.Container(width=s * 0.15, height=s * 0.15, left=s * 0.425, top=s * 0.35, border_radius=(s * 0.15) // 2, bgcolor="#5A00FF"),
-        ft.Container(width=s * 0.2, height=2, left=s * 0.22, top=s * 0.42, bgcolor="#5A00FF"),
-        ft.Container(width=s * 0.2, height=2, left=s * 0.58, top=s * 0.42, bgcolor="#5A00FF"),
-        ft.Container(width=2, height=s * 0.2, left=s * 0.49, top=s * 0.48, bgcolor="#5A00FF"),
-        ft.Container(width=s * 0.1, height=s * 0.1, left=s * 0.2, top=s * 0.38, border_radius=(s * 0.1) // 2, bgcolor="#5A00FF"),
-        ft.Container(width=s * 0.1, height=s * 0.1, left=s * 0.7, top=s * 0.38, border_radius=(s * 0.1) // 2, bgcolor="#5A00FF"),
-        ft.Container(width=s * 0.1, height=s * 0.1, left=s * 0.45, top=s * 0.65, border_radius=(s * 0.1) // 2, bgcolor="#5A00FF"),
+        ft.Container(width=s, height=s, border_radius=s // 2, bgcolor=accent, opacity=0.12),
+        ft.Container(width=s * 0.7, height=s * 0.75, left=s * 0.15, top=s * 0.08, bgcolor=bg, border=ft.Border.all(3, accent), border_radius=ft.BorderRadius.only(top_left=(s * 0.7) // 2, top_right=(s * 0.7) // 2, bottom_left=(s * 0.7) // 2, bottom_right=(s * 0.7) // 2)),
+        ft.Container(width=s * 0.15, height=s * 0.15, left=s * 0.425, top=s * 0.35, border_radius=(s * 0.15) // 2, bgcolor=accent),
+        ft.Container(width=s * 0.2, height=2, left=s * 0.22, top=s * 0.42, bgcolor=accent),
+        ft.Container(width=s * 0.2, height=2, left=s * 0.58, top=s * 0.42, bgcolor=accent),
+        ft.Container(width=2, height=s * 0.2, left=s * 0.49, top=s * 0.48, bgcolor=accent),
+        ft.Container(width=s * 0.1, height=s * 0.1, left=s * 0.2, top=s * 0.38, border_radius=(s * 0.1) // 2, bgcolor=accent),
+        ft.Container(width=s * 0.1, height=s * 0.1, left=s * 0.7, top=s * 0.38, border_radius=(s * 0.1) // 2, bgcolor=accent),
+        ft.Container(width=s * 0.1, height=s * 0.1, left=s * 0.45, top=s * 0.65, border_radius=(s * 0.1) // 2, bgcolor=accent),
     ])
 
 
 def build_background() -> ft.Control:
-    # ... (код без изменений) ...
+    # ... (код без изменений, он на прозрачном фоне) ...
     nodes = [(30, 40), (110, 20), (190, 80), (280, 30), (370, 100), (450, 50), (50, 170), (140, 230), (230, 160), (320, 240), (410, 170), (480, 220), (20, 310), (100, 380), (200, 320), (290, 400), (380, 320), (460, 390), (60, 470), (150, 530), (250, 480), (340, 550), (420, 470), (490, 540), (40, 600), (130, 660), (230, 610), (320, 670), (410, 600), (480, 660)]
     edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (0, 6), (1, 7), (2, 8), (3, 9), (4, 10), (5, 11), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (6, 12), (7, 13), (8, 14), (9, 15), (10, 16), (11, 17), (12, 13), (13, 14), (14, 15), (15, 16), (16, 17), (12, 18), (13, 19), (14, 20), (15, 21), (16, 22), (17, 23), (18, 19), (19, 20), (20, 21), (21, 22), (22, 23), (18, 24), (19, 25), (20, 26), (21, 27), (22, 28), (23, 29), (24, 25), (25, 26), (26, 27), (27, 28), (28, 29)]
     shapes = []
@@ -52,10 +57,10 @@ async def main(page: ft.Page):
     is_dark = await load_theme()
     if is_dark:
         page.theme_mode = ft.ThemeMode.DARK
-        page.bgcolor = "#121212"
+        page.bgcolor = bg_primary(page)
     else:
         page.theme_mode = ft.ThemeMode.LIGHT
-        page.bgcolor = "#F4F6F9"
+        page.bgcolor = bg_primary(page)
 
     page.padding = 20
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
@@ -80,8 +85,17 @@ async def main(page: ft.Page):
         page.update()
 
     def show_profile_screen():
-        # ... (код без изменений) ...
-        name_input = ft.TextField(label="Ваше имя", hint_text="Например, Александр", width=300, autofocus=True, border_color="#5A00FF", focused_border_color="#5A00FF")
+        name_input = ft.TextField(
+            label="Ваше имя", 
+            hint_text="Например, Александр", 
+            width=300, 
+            autofocus=True, 
+            border_color=text_accent(page), 
+            focused_border_color=text_accent(page),
+            color=text_primary(page),
+            label_style=ft.TextStyle(color=text_secondary(page))
+        )
+
         async def save_and_continue(e):
             name = name_input.value.strip() if name_input.value else ""
             if not name:
@@ -92,8 +106,18 @@ async def main(page: ft.Page):
             state.profile_created = True
             await save_profile(name)
             page.run_task(show_main_screen)
+
         save_btn = ft.Button(content=ft.Text("Сохранить и продолжить", color=ft.Colors.WHITE), bgcolor="#5A00FF", on_click=save_and_continue, width=300, height=45)
-        screen = ft.Column(controls=[build_logo(100), ft.Text("SupportDesk Mobile", size=28, weight=ft.FontWeight.BOLD, color="#5A00FF"), ft.Text("Твой помощник в поддержке", size=14, color="#666666"), ft.Container(height=20), name_input, ft.Container(height=10), save_btn], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5, expand=True, alignment=ft.MainAxisAlignment.CENTER)
+
+        screen = ft.Column(
+            controls=[
+                build_logo(100, page),
+                ft.Text("SupportDesk Mobile", size=28, weight=ft.FontWeight.BOLD, color=text_accent(page)),
+                ft.Text("Твой помощник в поддержке", size=14, color=text_secondary(page)),
+                ft.Container(height=20), name_input, ft.Container(height=10), save_btn,
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5, expand=True, alignment=ft.MainAxisAlignment.CENTER,
+        )
         set_screen(screen)
 
     async def show_main_screen():
@@ -104,45 +128,45 @@ async def main(page: ft.Page):
             try:
                 if section == "Справочник":
                     body = KnowledgeScreen(page).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
+                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 elif section == "Тренажёры":
                     def start_sim(level: int, is_advanced: bool):
                         sim = SimulatorScreen(page, on_back=lambda: page.run_task(show_main_screen), level=level, is_advanced=is_advanced)
                         body = sim.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("К выбору тренажёра", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: open_section("Тренажёры"))
+                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тренажёры"))
                         set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
                     body = SimulatorSelectionScreen(page, on_start_simulator=start_sim).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
+                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 elif section == "Тесты":
                     def start_quiz(level: int):
                         quiz = QuizScreen(page, level=level, on_back=lambda: page.run_task(show_main_screen))
                         body = quiz.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("К выбору теста", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: open_section("Тесты"))
+                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору теста", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тесты"))
                         set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
                     body = QuizSelectionScreen(page, on_start_quiz=start_quiz).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
+                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 elif section == "Прогресс":
                     progress_screen = ProgressScreen(page)
                     async def load_progress_screen():
                         body = await progress_screen.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
+                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                         set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
                     page.run_task(load_progress_screen)
 
                 elif section == "Профиль":
                     body = ProfileScreen(page).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
+                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 elif section == "О программе":
                     body = AboutScreen(page, on_back=lambda: page.run_task(show_main_screen)).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
+                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
                 else:
@@ -158,34 +182,34 @@ async def main(page: ft.Page):
             return ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.Container(content=ft.Icon(icon=icon, size=32, color=color), width=56, height=56, bgcolor="#F4F0FF", border_radius=28, alignment=ft.Alignment.CENTER),
-                        ft.Column(controls=[ft.Text(title, size=17, weight=ft.FontWeight.BOLD, color="#333333"), ft.Text(subtitle, size=12, color="#666666")], spacing=2, expand=True),
-                        ft.Icon(icon=ft.Icons.CHEVRON_RIGHT, color="#999999", size=22),
+                        ft.Container(content=ft.Icon(icon=icon, size=32, color=color), width=56, height=56, bgcolor="#F4F0FF" if not page.theme_mode == ft.ThemeMode.DARK else "#3D3D1C", border_radius=28, alignment=ft.Alignment.CENTER),
+                        ft.Column(controls=[ft.Text(title, size=17, weight=ft.FontWeight.BOLD, color=text_primary(page)), ft.Text(subtitle, size=12, color=text_secondary(page))], spacing=2, expand=True),
+                        ft.Icon(icon=ft.Icons.CHEVRON_RIGHT, color=text_secondary(page), size=22),
                     ],
                     spacing=15,
                 ),
-                bgcolor="#FFFFFF", border_radius=14, padding=ft.Padding.symmetric(vertical=15, horizontal=20), width=380,
+                bgcolor=bg_card(page), border_radius=14, padding=ft.Padding.symmetric(vertical=15, horizontal=20), width=380,
                 on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
             )
 
         cards_column = ft.Column(
             controls=[
-                make_card("Справочник", "База знаний и статьи", ft.Icons.MENU_BOOK, "#5A00FF", "Справочник"),
-                make_card("Тренажёры", "L1, L2, L3 — симулятор заявок", ft.Icons.SCHOOL, "#5A00FF", "Тренажёры"),
-                make_card("Тесты", "Проверка знаний (25 вопросов)", ft.Icons.QUIZ, "#5A00FF", "Тесты"),
-                make_card("Прогресс", "Статистика обучения", ft.Icons.BAR_CHART, "#5A00FF", "Прогресс"),
-                make_card("Профиль", "Настройки и история тестов", ft.Icons.PERSON, "#5A00FF", "Профиль"),
-                make_card("О программе", "Информация об авторе и версии", ft.Icons.INFO, "#5A00FF", "О программе"),
+                make_card("Справочник", "База знаний и статьи", ft.Icons.MENU_BOOK, text_accent(page), "Справочник"),
+                make_card("Тренажёры", "L1, L2, L3 — симулятор заявок", ft.Icons.SCHOOL, text_accent(page), "Тренажёры"),
+                make_card("Тесты", "Проверка знаний (25 вопросов)", ft.Icons.QUIZ, text_accent(page), "Тесты"),
+                make_card("Прогресс", "Статистика обучения", ft.Icons.BAR_CHART, text_accent(page), "Прогресс"),
+                make_card("Профиль", "Настройки и история тестов", ft.Icons.PERSON, text_accent(page), "Профиль"),
+                make_card("О программе", "Информация об авторе и версии", ft.Icons.INFO, text_accent(page), "О программе"),
             ],
             spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO, expand=True,
         )
 
         content_column = ft.Column(
             controls=[
-                build_logo(70), ft.Container(height=10),
-                ft.Text(f"👋 Привет, {state.profile_name}!", size=22, weight=ft.FontWeight.BOLD),
-                ft.Text(f"Решено заявок: {solved_count}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD),
-                ft.Text("Выбери раздел, чтобы начать", size=13, color="#666666"),
+                build_logo(70, page), ft.Container(height=10),
+                ft.Text(f"👋 Привет, {state.profile_name}!", size=22, weight=ft.FontWeight.BOLD, color=text_primary(page)),
+                ft.Text(f"Решено заявок: {solved_count}", size=14, color=text_accent(page), weight=ft.FontWeight.BOLD),
+                ft.Text("Выбери раздел, чтобы начать", size=13, color=text_secondary(page)),
                 ft.Container(height=20), cards_column,
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10, expand=True,

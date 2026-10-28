@@ -78,7 +78,6 @@ class ProgressScreen:
             best_mins = best_time // 60
             best_secs = best_time % 60
 
-            # --- ИСПРАВЛЕНИЕ: Оборачиваем stats_card в Row для центрирования ---
             stats_card = ft.Container(
                 content=ft.Row(
                     controls=[
@@ -98,31 +97,35 @@ class ProgressScreen:
                 bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
             )
 
-            # Оборачиваем всё в Row по центру
             cases_section = ft.Row(
-                controls=[
-                    ft.Column(controls=[stats_card, ft.Container(height=20), list_card], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-                ],
+                controls=[ft.Column(controls=[stats_card, ft.Container(height=20), list_card], horizontal_alignment=ft.CrossAxisAlignment.CENTER)],
                 alignment=ft.MainAxisAlignment.CENTER,
             )
 
-        # --- Блок ачивок ---
+        # --- Блок ачивок (с описанием) ---
         earned_ids = [a["id"] for a in earned_achievements]
         ach_cards = []
         for ach in all_achievements:
             is_earned = ach["id"] in earned_ids
+            # Делаем карточку шире, чтобы влезло описание
             ach_cards.append(
                 ft.Container(
                     content=ft.Column(
                         controls=[
-                            ft.Text(ach["icon"], size=30, color=None if is_earned else "#555555"),
-                            ft.Text(ach["title"], size=12, weight=ft.FontWeight.BOLD, color=text_primary(self.page) if is_earned else text_secondary(self.page), text_align=ft.TextAlign.CENTER),
+                            ft.Row(
+                                controls=[
+                                    ft.Text(ach["icon"], size=24, color=None if is_earned else "#555555"),
+                                    ft.Text(ach["title"], size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page) if is_earned else text_secondary(self.page)),
+                                ],
+                                spacing=10,
+                            ),
+                            ft.Text(ach["description"], size=11, color=text_secondary(self.page) if is_earned else "#777777"),
                         ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=4,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=5,
                     ),
                     bgcolor=bg_card(self.page) if is_earned else bg_card_alt(self.page),
-                    padding=10, border_radius=8, width=100, height=100,
+                    padding=12, border_radius=8, width=280, height=80,
                     alignment=ft.Alignment.CENTER, opacity=1.0 if is_earned else 0.5,
                 )
             )
