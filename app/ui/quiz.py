@@ -2,6 +2,7 @@
 #
 # Экран тестирования (L1, L2, L3).
 # Тест состоит из 20 случайных вопросов.
+# В конце — разбор ошибок.
 
 import json
 import random
@@ -21,6 +22,10 @@ class QuizScreen:
         self.questions = self._load_questions()
         self.current_idx = 0
         self.correct_answers = 0
+        
+        # Список для хранения истории ответов (для разбора в конце)
+        # Формат: {"question": str, "user_answer": str, "correct_answer": str, "is_correct": bool}
+        self.answers_history = [] 
 
         self.timer_seconds = 0
         self.timer_running = True
@@ -29,15 +34,12 @@ class QuizScreen:
         self.timer_text = None
 
     def _load_questions(self) -> list:
-        """Загружает 20 случайных вопросов для текущего уровня."""
         try:
             data_file = resources.files("assets").joinpath("quiz_questions.json")
             with data_file.open("r", encoding="utf-8") as f:
                 all_q = json.load(f).get("questions", [])
             
-            # Фильтруем по уровню
             filtered = [q for q in all_q if q["level"] == self.level]
-            # Перемешиваем и берем 20 (или меньше, если в пуле мало вопросов)
             random.shuffle(filtered)
             return filtered[:20]
         except Exception as e:
@@ -123,7 +125,17 @@ class QuizScreen:
 
     def _on_answer(self, answer_idx: int):
         q = self.questions[self.current_idx]
-        if answer_idx == q["correct"]:
+        is_correct = (answer_idx == q["correct"])
+        
+        # Записываем в историю
+        self.answers_history.append({
+            "question": q["question"],
+            "user_answer": q["options"][answer_idx],
+            "correct_answer": q["options"][q["correct"]],
+            "is_correct": is_correct
+        })
+
+        if is_correct:
             self.correct_answers += 1
             self.page.snack_bar = ft.SnackBar(ft.Text("✅ Верно!", color="white"), bgcolor="#00A896", duration=1000)
         else:
@@ -146,7 +158,6 @@ class QuizScreen:
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
 
-        # Логика оценки: проходной балл 15 из 20
         passed = self.correct_answers >= 15
         
         if passed:
@@ -160,6 +171,48 @@ class QuizScreen:
 
         score_percent = int((self.correct_answers / len(self.questions)) * 100)
 
+        # --- Собираем блок разбора ошибок ---
+        review_controls = []
+        for idx, item in enumerate(self.answers_history):
+            if not item["is_correct"]:
+                # Красная карточка для ошибки
+                review_controls.append(
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Text(f"Вопрос {idx + 1}: {item['question']}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                                ft.Text(f"❌ Ваш ответ: {item['user_answer']}", size=13, color="#E63946"),
+                                ft.Text(f"✅ Правильный ответ: {item['correct_answer']}", size=13, color="#00A896", weight=ft.FontWeight.BOLD),
+                            ],
+                            spacing=5,
+                        ),
+                        bgcolor="#FFF3F3",
+                        padding=12,
+                        border_radius=8,
+                        width=550,
+                        border=ft.Border.all(1, "#E63946")
+                    )
+                )
+
+        # Если ошибок нет
+        if not review_controls:
+            review_controls.append(
+                ft.Text("🎉 Вы ответили правильно на все вопросы!", size=14, color="#00A896", weight=ft.FontWeight.BOLD)
+            )
+
+        review_section = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Text("📝 Разбор ответов", size=16, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Container(height=10),
+                    ft.Column(controls=review_controls, spacing=10),
+                ]
+            ),
+            bgcolor="#F4F6F9",
+            width=600,
+        )
+
+        # --- Основная карточка результата ---
         card = ft.Container(
             content=ft.Column(
                 controls=[
@@ -191,10 +244,18 @@ class QuizScreen:
             on_click=lambda e: self.on_back(),
         )
 
+        # Собираем финальный экран
         self.container.content = ft.Column(
-            controls=[card, ft.Container(height=20), back_btn],
+            controls=[
+                card,
+                ft.Container(height=20),
+                review_section,
+                ft.Container(height=20),
+                back_btn
+            ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            alignment=ft.MainAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.START, # Начинаем сверху, чтобы можно было листать
             expand=True,
+            scroll=ft.ScrollMode.AUTO,
         )
         self.page.update()
