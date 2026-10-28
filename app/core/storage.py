@@ -1,16 +1,14 @@
 # app/core/storage.py
 #
-# Модуль хранения профиля (Flet 1.0.5).
-# SharedPreferences в 1.0 — асинхронный сервис: методы нужно await-ить.
+# Модуль хранения профиля и прогресса (Flet 1.0.5).
+# Использует SharedPreferences.
 
+import json
 import flet as ft
 
 
 async def load_profile() -> str:
-    """
-    Загружает имя профиля из SharedPreferences.
-    Возвращает "" если профиль не создан.
-    """
+    """Загружает имя профиля."""
     try:
         prefs = ft.SharedPreferences()
         name = await prefs.get("profile_name")
@@ -21,9 +19,7 @@ async def load_profile() -> str:
 
 
 async def save_profile(name: str):
-    """
-    Сохраняет имя профиля в SharedPreferences.
-    """
+    """Сохраняет имя профиля."""
     try:
         prefs = ft.SharedPreferences()
         await prefs.set("profile_name", name)
@@ -32,14 +28,25 @@ async def save_profile(name: str):
 
 
 async def load_progress() -> dict:
-    """Заглушка прогресса."""
-    return {}
+    """
+    Загружает прогресс из SharedPreferences (в виде JSON-строки).
+    Возвращает словарь {case_id: {"status": "passed", "time": 45}}.
+    """
+    try:
+        prefs = ft.SharedPreferences()
+        raw = await prefs.get("progress_data")
+        if raw:
+            return json.loads(raw)
+        return {}
+    except Exception as e:
+        print(f"Ошибка загрузки прогресса: {e}")
+        return {}
 
 
 async def save_progress(progress: dict):
-    """Заглушка сохранения прогресса."""
+    """Сохраняет прогресс в виде JSON-строки."""
     try:
         prefs = ft.SharedPreferences()
-        await prefs.set("progress", "{}")
+        await prefs.set("progress_data", json.dumps(progress))
     except Exception as e:
         print(f"Ошибка сохранения прогресса: {e}")

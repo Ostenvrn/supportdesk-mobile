@@ -3,9 +3,7 @@
 # Симулятор входящих заявок с консолью команд.
 #
 # Новое:
-# - Консоль с автоскроллингом (ft.ListView auto_scroll=True).
-# - Обычный режим: показывается команда + вывод + расшифровка.
-# - Продвинутый режим: текстовое поле для ввода команды, показывается только вывод.
+# - Сохранение прогресса в SharedPreferences.
 
 import json
 import random
@@ -14,19 +12,20 @@ from importlib import resources
 
 import flet as ft
 
+# Добавили импорт для сохранения прогресса
+from app.core.storage import load_progress, save_progress
+
 
 class SimulatorScreen:
     def __init__(self, page: ft.Page, on_back, is_advanced: bool = False):
         self.page = page
         self.on_back = on_back
-        self.is_advanced = is_advanced  # Флаг: обычный или продвинутый режим
+        self.is_advanced = is_advanced
 
         self.all_cases = self._load_cases()
-        # Если продвинутый режим — берём только advanced кейсы
         if self.is_advanced:
             self.all_cases = [c for c in self.all_cases if c.get("advanced")]
         else:
-            # В обычном режиме показываем все (или только не advanced)
             self.all_cases = [c for c in self.all_cases if not c.get("advanced")]
 
         self.remaining_ids = [c["id"] for c in self.all_cases]
@@ -37,7 +36,6 @@ class SimulatorScreen:
         self.timer_seconds = 0
         self.timer_running = False
 
-        # Хранилище логов консоли
         self.console_logs = []
 
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
@@ -56,8 +54,6 @@ class SimulatorScreen:
     def build(self) -> ft.Control:
         self._show_next_case()
         return ft.Column(controls=[self.container], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-
-    # ---------- Экран 1: карточка заявки ----------
 
     def _show_next_case(self):
         if not self.remaining_ids:
@@ -152,8 +148,6 @@ class SimulatorScreen:
             spacing=5,
         )
 
-    # ---------- Экран 2: консоль ----------
-
     def _start_case(self):
         self.timer_running = True
         self.current_command_idx = 0
@@ -174,7 +168,6 @@ class SimulatorScreen:
         threading.Timer(1.0, tick).start()
 
     def _add_console_line(self, text: str, color: str = "#00FF00"):
-        """Добавляет строку в лог и обновляет ListView."""
         self.console_logs.append(ft.Text(text, size=12, color=color, font_family="Courier New", selectable=True))
         if self.console_list:
             self.console_list.controls.append(self.console_logs[-1])
@@ -191,14 +184,8 @@ class SimulatorScreen:
             self._show_solution()
             return
 
-        # Инициализируем консоль
-        self.console_list = ft.ListView(
-            expand=True,
-            spacing=5,
-            auto_scroll=True,  # Включает автоскроллинг!
-        )
+        self.console_list = ft.ListView(expand=True, spacing=5, auto_scroll=True)
 
-        # Если консоль пустая, добавляем шапку
         if not self.console_logs:
             self.console_logs.append(ft.Text("Microsoft Windows [Version 10.0.19045.3803]", size=12, color="#00FF00", font_family="Courier New"))
             self.console_logs.append(ft.Text("(c) Корпорация Майкрософт. Все права защищены.\n", size=12, color="#00FF00", font_family="Courier New"))
@@ -211,11 +198,9 @@ class SimulatorScreen:
             size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
         )
 
-        # В зависимости от режима — разные панели управления
         controls_panel = []
 
         if self.is_advanced:
-            # Продвинутый режим: поле ввода команды
             cmd_input = ft.TextField(
                 hint_text="Введите команду (например: ping 8.8.8.8)",
                 expand=True,
@@ -231,14 +216,11 @@ class SimulatorScreen:
                 if not user_cmd:
                     return
                 
-                # Проверяем, ввёл ли пользователь правильную команду
                 if user_cmd == cmd["name"]:
-                    # Верно
                     self._execute_command(cmd)
                     cmd_input.value = ""
                     self.page.update()
                 else:
-                    # Ошибка
                     self._add_console_line(f"C:\\Users\\support> {user_cmd}", color="#FFFFFF")
                     self._add_console_line("Команда не распознана или неверна для этой ситуации.", color="#FF5555")
                     cmd_input.value = ""
@@ -255,10 +237,8 @@ class SimulatorScreen:
                     spacing=5,
                 )
             )
-            # Подсказка для пользователя
             controls_panel.append(ft.Text(f"Подсказка: проверьте логи и введите нужную команду.", size=12, italic=True, color="#888888"))
         else:
-            # Обычный режим: кнопка "Выполнить команду"
             cmd_btn = ft.Button(
                 content=ft.Text(f"▶ Выполнить: {cmd['name']}", size=13, color="#FFFFFF"),
                 bgcolor="#333333",
@@ -291,7 +271,6 @@ class SimulatorScreen:
                         ],
                     ),
                     ft.Container(height=5),
-                    # Обертка для консоли (черный фон, фикс. высота)
                     ft.Container(
                         content=self.console_list,
                         bgcolor="#1E1E1E",
@@ -301,7 +280,6 @@ class SimulatorScreen:
                         width=600,
                     ),
                     ft.Container(height=10),
-                    # Панель управления (кнопка или поле ввода)
                     ft.Column(controls=controls_panel, spacing=10),
                     self.interpret_container,
                 ],
@@ -323,15 +301,12 @@ class SimulatorScreen:
         self.page.update()
 
     def _execute_command(self, cmd: dict):
-        """Имитация выполнения команды (вызывается из кнопки или поля ввода)."""
         prompt_line = f"C:\\Users\\support> {cmd['name']}"
         output = cmd.get("output", "Команда выполнена.")
 
-        # Добавляем ввод и вывод в консоль
         self._add_console_line(prompt_line, color="#FFFFFF")
         self._add_console_line(output)
 
-        # В обычном режиме показываем расшифровку, в продвинутом — нет (пользователь сам должен понять)
         if not self.is_advanced:
             explanation = cmd.get("explanation", "")
             if explanation:
@@ -339,18 +314,11 @@ class SimulatorScreen:
             else:
                 self._show_interpretation(cmd, None)
         else:
-            # В продвинутом режиме просто переходим к следующему шагу
             self.current_command_idx += 1
-            # Небольшая задержка перед обновлением консоли, чтобы юзер увидел вывод
-            import time
-            # Перерисовываем панель с новой командой
             self.page.update()
-            # Ждем немного перед тем как показать новую команду (можно убрать, если мешает)
-            # time.sleep(1) 
             self._show_console()
 
     def _show_interpretation(self, cmd: dict, explanation: str):
-        """Показывает расшифровку вывода (только для обычного режима)."""
         question = cmd.get("question", "")
         answers = cmd.get("answers", [])
 
@@ -389,9 +357,7 @@ class SimulatorScreen:
                 )
             )
         else:
-            # Если вопросов нет (просто клик по кнопке), то выводим кнопку "Далее"
             if answers:
-                # Если ответы есть, но вопрос не задан (редкий случай)
                 pass
             else:
                 next_btn = ft.Button(
@@ -418,12 +384,9 @@ class SimulatorScreen:
             self.interpret_container.controls = []
             self._show_console()
         else:
-            # Неправильно — кнопка становится красной
             button.bgcolor = "#E63946"
             button.content.color = ft.Colors.WHITE
             self.page.update()
-
-    # ---------- Экран 3: решение ----------
 
     def _show_solution(self):
         self.timer_running = False
@@ -437,6 +400,24 @@ class SimulatorScreen:
 
         if not final_cmd:
             final_cmd = {"name": "close_ticket", "output": "Заявка закрыта."}
+
+        # ==========================================
+        # СОХРАНЕНИЕ ПРОГРЕССА
+        # ==========================================
+        async def save_result():
+            progress = await load_progress()
+            progress[self.current_case["id"]] = {
+                "status": "passed",
+                "time": self.timer_seconds,
+                "number": self.current_case["number"],
+                "topic": self.current_case["topic"]
+            }
+            await save_progress(progress)
+
+        # Запускаем асинхронное сохранение
+        import asyncio
+        self.page.run_task(save_result)
+        # ==========================================
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60

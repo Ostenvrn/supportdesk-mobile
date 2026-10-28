@@ -1,7 +1,6 @@
 # app.py
 #
 # Точка входа SupportDesk Mobile (Flet 1.0.5).
-# Главный экран + Справочник + Тренажёр (обычный и продвинутый).
 
 import flet as ft
 import flet.canvas as cv
@@ -10,6 +9,8 @@ import app.state as state
 from app.core.storage import load_profile, save_profile
 from app.ui.screens import KnowledgeScreen
 from app.ui.simulator import SimulatorScreen
+from app.ui.progress import ProgressScreen
+from app.ui.profile import ProfileScreen
 
 
 def build_logo(size: int = 80) -> ft.Control:
@@ -91,6 +92,8 @@ async def main(page: ft.Page):
 
     knowledge_screen_holder = {"instance": None}
     simulator_screen_holder = {"instance": None, "advanced": False}
+    progress_screen_holder = {"instance": None}
+    profile_screen_holder = {"instance": None}
 
     def set_screen(control: ft.Control):
         switcher.content = control
@@ -136,7 +139,6 @@ async def main(page: ft.Page):
                 set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
             elif section == "Тренажёр":
-                # Сбрасываем инстанс, чтобы каждый раз начинать заново
                 simulator_screen_holder["instance"] = SimulatorScreen(page, on_back=show_main_screen, is_advanced=False)
                 body = simulator_screen_holder["instance"].build()
                 back_btn = ft.TextButton(
@@ -148,6 +150,30 @@ async def main(page: ft.Page):
             elif section == "Продвинутый режим":
                 simulator_screen_holder["instance"] = SimulatorScreen(page, on_back=show_main_screen, is_advanced=True)
                 body = simulator_screen_holder["instance"].build()
+                back_btn = ft.TextButton(
+                    content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
+                    on_click=lambda e: show_main_screen(),
+                )
+                set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+
+            elif section == "Прогресс":
+                # Асинхронная загрузка экрана прогресса
+                progress_screen_holder["instance"] = ProgressScreen(page)
+                
+                async def load_progress_screen():
+                    body = await progress_screen_holder["instance"].build()
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
+                        on_click=lambda e: show_main_screen(),
+                    )
+                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+
+                page.run_task(load_progress_screen)
+
+            elif section == "Профиль":
+                if profile_screen_holder["instance"] is None:
+                    profile_screen_holder["instance"] = ProfileScreen(page)
+                body = profile_screen_holder["instance"].build()
                 back_btn = ft.TextButton(
                     content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
                     on_click=lambda e: show_main_screen(),
