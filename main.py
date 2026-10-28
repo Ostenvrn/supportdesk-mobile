@@ -37,7 +37,6 @@ def build_logo(size: int = 80, page: ft.Page = None) -> ft.Control:
 
 
 def build_background() -> ft.Control:
-    # ... (код без изменений, он на прозрачном фоне) ...
     nodes = [(30, 40), (110, 20), (190, 80), (280, 30), (370, 100), (450, 50), (50, 170), (140, 230), (230, 160), (320, 240), (410, 170), (480, 220), (20, 310), (100, 380), (200, 320), (290, 400), (380, 320), (460, 390), (60, 470), (150, 530), (250, 480), (340, 550), (420, 470), (490, 540), (40, 600), (130, 660), (230, 610), (320, 670), (410, 600), (480, 660)]
     edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (0, 6), (1, 7), (2, 8), (3, 9), (4, 10), (5, 11), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (6, 12), (7, 13), (8, 14), (9, 15), (10, 16), (11, 17), (12, 13), (13, 14), (14, 15), (15, 16), (16, 17), (12, 18), (13, 19), (14, 20), (15, 21), (16, 22), (17, 23), (18, 19), (19, 20), (20, 21), (21, 22), (22, 23), (18, 24), (19, 25), (20, 26), (21, 27), (22, 28), (23, 29), (24, 25), (25, 26), (26, 27), (27, 28), (28, 29)]
     shapes = []
@@ -179,7 +178,7 @@ async def main(page: ft.Page):
                 set_screen(error_screen)
 
         def make_card(title: str, subtitle: str, icon, color: str, section: str):
-            return ft.Container(
+            card = ft.Container(
                 content=ft.Row(
                     controls=[
                         ft.Container(content=ft.Icon(icon=icon, size=32, color=color), width=56, height=56, bgcolor="#F4F0FF" if not page.theme_mode == ft.ThemeMode.DARK else "#3D3D1C", border_radius=28, alignment=ft.Alignment.CENTER),
@@ -188,11 +187,14 @@ async def main(page: ft.Page):
                     ],
                     spacing=15,
                 ),
-                bgcolor=bg_card(page), border_radius=14, padding=ft.Padding.symmetric(vertical=15, horizontal=20), width=380,
+                bgcolor=bg_card(page), border_radius=14, padding=ft.Padding.symmetric(vertical=15, horizontal=20),
+                # Делаем карточку адаптивной: на мобилке 1 в ряд, на ПК 2 в ряд
+                col={"xs": 12, "sm": 6},
                 on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
             )
+            return card
 
-        cards_column = ft.Column(
+        cards_column = ft.ResponsiveRow(
             controls=[
                 make_card("Справочник", "База знаний и статьи", ft.Icons.MENU_BOOK, text_accent(page), "Справочник"),
                 make_card("Тренажёры", "L1, L2, L3 — симулятор заявок", ft.Icons.SCHOOL, text_accent(page), "Тренажёры"),
@@ -201,7 +203,7 @@ async def main(page: ft.Page):
                 make_card("Профиль", "Настройки и история тестов", ft.Icons.PERSON, text_accent(page), "Профиль"),
                 make_card("О программе", "Информация об авторе и версии", ft.Icons.INFO, text_accent(page), "О программе"),
             ],
-            spacing=15, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO, expand=True,
+            spacing=15, run_spacing=15,
         )
 
         content_column = ft.Column(
