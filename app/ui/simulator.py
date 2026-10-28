@@ -1,6 +1,11 @@
 # app/ui/simulator.py
 #
 # Симулятор входящих заявок с консолью команд.
+#
+# Новое:
+# - Кнопка "Посмотреть заявку" в режиме диагностики (открывает BottomSheet с деталями).
+# - Сохранение прогресса.
+# - Автоскроллинг консоли.
 
 import json
 import random
@@ -17,7 +22,6 @@ class SimulatorScreen:
         self.on_back = on_back
         self.is_advanced = is_advanced
 
-        # Загружаем кейсы из обоих файлов
         self.all_cases = self._load_all_cases()
 
         if self.is_advanced:
@@ -42,8 +46,6 @@ class SimulatorScreen:
     def _load_all_cases(self) -> list:
         """Загружает кейсы из основного и дополнительного JSON-файлов."""
         cases = []
-        
-        # Загружаем основной файл
         try:
             data_file = resources.files("assets").joinpath("cases_simulator.json")
             with data_file.open("r", encoding="utf-8") as f:
@@ -51,15 +53,12 @@ class SimulatorScreen:
         except Exception as e:
             print(f"Ошибка загрузки основного файла кейсов: {e}")
 
-        # Загружаем дополнительный файл (если есть)
         try:
             extra_file = resources.files("assets").joinpath("cases_advanced_batch.json")
             with extra_file.open("r", encoding="utf-8") as f:
                 cases.extend(json.load(f).get("cases", []))
-        except Exception as e:
-            # Если файла нет — просто пропускаем (не выводим ошибку, это нормально)
+        except Exception:
             pass
-            
         return cases
 
     def build(self) -> ft.Control:
@@ -184,6 +183,47 @@ class SimulatorScreen:
             self.console_list.controls.append(self.console_logs[-1])
             self.page.update()
 
+    def _show_ticket_info(self, e):
+        """Открывает BottomSheet с информацией о текущей заявке."""
+        case = self.current_case
+        if not case:
+            return
+
+        bs = ft.BottomSheet(
+            ft.Container(
+                padding=20,
+                content=ft.Column(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                ft.Icon(icon=ft.Icons.ASSIGNMENT, color="#5A00FF"),
+                                ft.Text(f"Заявка {case['number']}", size=18, weight=ft.FontWeight.BOLD),
+                            ],
+                        ),
+                        ft.Divider(),
+                        ft.Text(f"Абонент: {case['subscriber'].get('name', '—')}", size=14),
+                        ft.Text(f"Адрес: {case['subscriber'].get('address', '—')}", size=14),
+                        ft.Text(f"Тариф: {case['subscriber'].get('tariff', '—')}", size=14),
+                        ft.Divider(),
+                        ft.Text("Жалоба:", size=14, weight=ft.FontWeight.BOLD),
+                        ft.Text(case["complaint"], size=14, color="#333333"),
+                        ft.Container(height=20),
+                        ft.Button(
+                            "Понятно, закрыть",
+                            bgcolor="#5A00FF",
+                            color=ft.Colors.WHITE,
+                            on_click=lambda _: self.page.close(bs)
+                        )
+                    ],
+                    tight=True,
+                    scroll=ft.ScrollMode.AUTO
+                )
+            ),
+            open=True,
+        )
+        self.page.overlay.append(bs)
+        self.page.update()
+
     def _show_console(self):
         commands = self.current_case.get("commands", [])
         if self.current_command_idx >= len(commands):
@@ -271,16 +311,26 @@ class SimulatorScreen:
         self.interpret_container = ft.Column(controls=[], spacing=8)
         self.interpret_buttons = []
 
+        # Верхняя панель с кнопкой "Посмотреть заявку"
+        top_panel = ft.Row(
+            controls=[
+                ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
+                ft.TextButton(
+                    "Посмотреть заявку",
+                    icon=ft.Icons.VISIBILITY,
+                    style=ft.ButtonStyle(color="#5A00FF"),
+                    on_click=self._show_ticket_info
+                ),
+                ft.Container(expand=True),
+                self.timer_text,
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+
         console_card = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
-                            ft.Container(expand=True),
-                            self.timer_text,
-                        ],
-                    ),
+                    top_panel,
                     ft.Container(height=5),
                     ft.Container(
                         content=self.console_list,
@@ -412,9 +462,6 @@ class SimulatorScreen:
         if not final_cmd:
             final_cmd = {"name": "close_ticket", "output": "Заявка закрыта."}
 
-        # ==========================================
-        # СОХРАНЕНИЕ ПРОГРЕССА
-        # ==========================================
         async def save_result():
             progress = await load_progress()
             progress[self.current_case["id"]] = {
@@ -425,10 +472,7 @@ class SimulatorScreen:
             }
             await save_progress(progress)
 
-        # Запускаем асинхронное сохранение
-        import asyncio
         self.page.run_task(save_result)
-        # ==========================================
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
