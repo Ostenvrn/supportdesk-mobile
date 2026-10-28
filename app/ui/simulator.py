@@ -2,11 +2,10 @@
 #
 # Симулятор входящих заявок с консолью команд.
 #
-# Особенности:
-# - Всё выровнено по центру.
-# - Консоль уменьшена по высоте, чтобы влезали ответы.
-# - При неправильном ответе кнопка загорается красным.
-# - В консоли сначала команда, потом вывод.
+# Новое:
+# - Консоль с автоскроллингом (ft.ListView auto_scroll=True).
+# - Обычный режим: показывается команда + вывод + расшифровка.
+# - Продвинутый режим: текстовое поле для ввода команды, показывается только вывод.
 
 import json
 import random
@@ -17,11 +16,19 @@ import flet as ft
 
 
 class SimulatorScreen:
-    def __init__(self, page: ft.Page, on_back):
+    def __init__(self, page: ft.Page, on_back, is_advanced: bool = False):
         self.page = page
         self.on_back = on_back
+        self.is_advanced = is_advanced  # Флаг: обычный или продвинутый режим
 
         self.all_cases = self._load_cases()
+        # Если продвинутый режим — берём только advanced кейсы
+        if self.is_advanced:
+            self.all_cases = [c for c in self.all_cases if c.get("advanced")]
+        else:
+            # В обычном режиме показываем все (или только не advanced)
+            self.all_cases = [c for c in self.all_cases if not c.get("advanced")]
+
         self.remaining_ids = [c["id"] for c in self.all_cases]
 
         self.current_case = None
@@ -30,12 +37,12 @@ class SimulatorScreen:
         self.timer_seconds = 0
         self.timer_running = False
 
-        self.console_lines = []
+        # Хранилище логов консоли
+        self.console_logs = []
 
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
-        self.console_output = None
+        self.console_list = None
         self.timer_text = None
-        self.interpret_buttons = []
 
     def _load_cases(self) -> list:
         try:
@@ -56,6 +63,11 @@ class SimulatorScreen:
         if not self.remaining_ids:
             self.remaining_ids = [c["id"] for c in self.all_cases]
 
+        if not self.remaining_ids:
+            self.container.content = ft.Text("Нет доступных заявок для этого режима.")
+            self.page.update()
+            return
+
         case_id = random.choice(self.remaining_ids)
         self.remaining_ids.remove(case_id)
 
@@ -69,11 +81,14 @@ class SimulatorScreen:
         self.current_command_idx = 0
         self.timer_seconds = 0
         self.timer_running = False
-        self.console_lines = []
+        self.console_logs = []
+
+        mode_text = "Продвинутый режим" if self.is_advanced else "Обычный режим"
 
         card = ft.Container(
             content=ft.Column(
                 controls=[
+                    ft.Text(mode_text, size=12, color="#888888", weight=ft.FontWeight.BOLD),
                     ft.Row(
                         controls=[
                             ft.Icon(icon=ft.Icons.ASSIGNMENT, color="#5A00FF", size=28),
@@ -142,7 +157,7 @@ class SimulatorScreen:
     def _start_case(self):
         self.timer_running = True
         self.current_command_idx = 0
-        self.console_lines = []
+        self.console_logs = []
         self._start_timer()
         self._show_console()
 
@@ -158,6 +173,13 @@ class SimulatorScreen:
                 threading.Timer(1.0, tick).start()
         threading.Timer(1.0, tick).start()
 
+    def _add_console_line(self, text: str, color: str = "#00FF00"):
+        """Добавляет строку в лог и обновляет ListView."""
+        self.console_logs.append(ft.Text(text, size=12, color=color, font_family="Courier New", selectable=True))
+        if self.console_list:
+            self.console_list.controls.append(self.console_logs[-1])
+            self.page.update()
+
     def _show_console(self):
         commands = self.current_case.get("commands", [])
         if self.current_command_idx >= len(commands):
@@ -169,30 +191,91 @@ class SimulatorScreen:
             self._show_solution()
             return
 
-        console_text = "\n".join(self.console_lines) if self.console_lines else "Microsoft Windows [Version 10.0.19045.3803]\n(c) Корпорация Майкрософт. Все права защищены.\n\nC:\\Users\\support>"
-
-        self.console_output = ft.Text(
-            value=console_text,
-            size=12,
-            color="#00FF00",
-            font_family="Courier New",
-            selectable=True,
+        # Инициализируем консоль
+        self.console_list = ft.ListView(
+            expand=True,
+            spacing=5,
+            auto_scroll=True,  # Включает автоскроллинг!
         )
+
+        # Если консоль пустая, добавляем шапку
+        if not self.console_logs:
+            self.console_logs.append(ft.Text("Microsoft Windows [Version 10.0.19045.3803]", size=12, color="#00FF00", font_family="Courier New"))
+            self.console_logs.append(ft.Text("(c) Корпорация Майкрософт. Все права защищены.\n", size=12, color="#00FF00", font_family="Courier New"))
+        
+        for log in self.console_logs:
+            self.console_list.controls.append(log)
 
         self.timer_text = ft.Text(
             f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}",
             size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
         )
 
-        cmd_buttons = [
-            ft.Button(
+        # В зависимости от режима — разные панели управления
+        controls_panel = []
+
+        if self.is_advanced:
+            # Продвинутый режим: поле ввода команды
+            cmd_input = ft.TextField(
+                hint_text="Введите команду (например: ping 8.8.8.8)",
+                expand=True,
+                bgcolor="#2D2D2D",
+                color="#FFFFFF",
+                border_color="#555555",
+                height=45,
+                text_style=ft.TextStyle(font_family="Courier New", size=13),
+            )
+
+            def submit_cmd(e):
+                user_cmd = cmd_input.value.strip()
+                if not user_cmd:
+                    return
+                
+                # Проверяем, ввёл ли пользователь правильную команду
+                if user_cmd == cmd["name"]:
+                    # Верно
+                    self._execute_command(cmd)
+                    cmd_input.value = ""
+                    self.page.update()
+                else:
+                    # Ошибка
+                    self._add_console_line(f"C:\\Users\\support> {user_cmd}", color="#FFFFFF")
+                    self._add_console_line("Команда не распознана или неверна для этой ситуации.", color="#FF5555")
+                    cmd_input.value = ""
+                    self.page.update()
+
+            cmd_input.on_submit = submit_cmd
+            
+            controls_panel.append(
+                ft.Row(
+                    controls=[
+                        ft.Text(">", size=16, color="#FFFFFF", font_family="Courier New"),
+                        cmd_input
+                    ],
+                    spacing=5,
+                )
+            )
+            # Подсказка для пользователя
+            controls_panel.append(ft.Text(f"Подсказка: проверьте логи и введите нужную команду.", size=12, italic=True, color="#888888"))
+        else:
+            # Обычный режим: кнопка "Выполнить команду"
+            cmd_btn = ft.Button(
                 content=ft.Text(f"▶ Выполнить: {cmd['name']}", size=13, color="#FFFFFF"),
                 bgcolor="#333333",
                 width=500,
                 height=40,
                 on_click=lambda e, c=cmd: self._execute_command(c),
             )
-        ]
+            controls_panel.append(
+                ft.Column(
+                    controls=[
+                        ft.Text(f"Доступная команда:", size=13, weight=ft.FontWeight.BOLD, color="#333333"),
+                        cmd_btn
+                    ],
+                    spacing=5,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                )
+            )
 
         self.interpret_container = ft.Column(controls=[], spacing=8)
         self.interpret_buttons = []
@@ -208,17 +291,18 @@ class SimulatorScreen:
                         ],
                     ),
                     ft.Container(height=5),
+                    # Обертка для консоли (черный фон, фикс. высота)
                     ft.Container(
-                        content=self.console_output,
+                        content=self.console_list,
                         bgcolor="#1E1E1E",
                         border_radius=8,
                         padding=15,
-                        height=180,   # Уменьшили высоту
+                        height=200,
                         width=600,
                     ),
                     ft.Container(height=10),
-                    ft.Text("Доступные команды:", size=13, weight=ft.FontWeight.BOLD, color="#333333"),
-                    ft.Column(controls=cmd_buttons, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    # Панель управления (кнопка или поле ввода)
+                    ft.Column(controls=controls_panel, spacing=10),
                     self.interpret_container,
                 ],
                 spacing=8,
@@ -239,52 +323,99 @@ class SimulatorScreen:
         self.page.update()
 
     def _execute_command(self, cmd: dict):
+        """Имитация выполнения команды (вызывается из кнопки или поля ввода)."""
         prompt_line = f"C:\\Users\\support> {cmd['name']}"
         output = cmd.get("output", "Команда выполнена.")
 
-        self.console_lines.append(prompt_line)
-        self.console_lines.append(output)
+        # Добавляем ввод и вывод в консоль
+        self._add_console_line(prompt_line, color="#FFFFFF")
+        self._add_console_line(output)
 
-        if self.console_output is not None:
-            self.console_output.value = "\n".join(self.console_lines) + "\n\nC:\\Users\\support>"
+        # В обычном режиме показываем расшифровку, в продвинутом — нет (пользователь сам должен понять)
+        if not self.is_advanced:
+            explanation = cmd.get("explanation", "")
+            if explanation:
+                self._show_interpretation(cmd, explanation)
+            else:
+                self._show_interpretation(cmd, None)
+        else:
+            # В продвинутом режиме просто переходим к следующему шагу
+            self.current_command_idx += 1
+            # Небольшая задержка перед обновлением консоли, чтобы юзер увидел вывод
+            import time
+            # Перерисовываем панель с новой командой
             self.page.update()
+            # Ждем немного перед тем как показать новую команду (можно убрать, если мешает)
+            # time.sleep(1) 
+            self._show_console()
 
-        self._show_interpretation(cmd)
-
-    def _show_interpretation(self, cmd: dict):
+    def _show_interpretation(self, cmd: dict, explanation: str):
+        """Показывает расшифровку вывода (только для обычного режима)."""
         question = cmd.get("question", "")
         answers = cmd.get("answers", [])
 
-        if not question or not answers:
-            self.current_command_idx += 1
-            self._show_console()
-            return
-
-        self.interpret_buttons = []
-        answer_buttons = []
-        for ans in answers:
-            btn = ft.Button(
-                content=ft.Text(ans["text"], size=13, color="#333333", text_align=ft.TextAlign.LEFT),
-                bgcolor="#F8F9FA",
-                width=500,
-                height=45,
-                on_click=lambda e, a=ans: self._on_interpret(a, e.control),
+        controls = []
+        
+        if explanation:
+            controls.append(
+                ft.Container(
+                    content=ft.Text(f"💡 {explanation}", size=13, color="#0056B3", selectable=True),
+                    padding=ft.Padding.all(10),
+                    bgcolor="#E7F1FF",
+                    border_radius=8,
+                    width=500
+                )
             )
-            self.interpret_buttons.append(btn)
-            answer_buttons.append(btn)
+
+        if question and answers:
+            answer_buttons = []
+            for ans in answers:
+                btn = ft.Button(
+                    content=ft.Text(ans["text"], size=13, color="#333333", text_align=ft.TextAlign.LEFT),
+                    bgcolor="#F8F9FA",
+                    width=500,
+                    height=40,
+                    on_click=lambda e, a=ans: self._on_interpret(a, e.control),
+                )
+                answer_buttons.append(btn)
+
+            controls.append(
+                ft.Column(
+                    controls=[
+                        ft.Text(f"❓ {question}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                        ft.Column(controls=answer_buttons, spacing=8),
+                    ],
+                    spacing=8
+                )
+            )
+        else:
+            # Если вопросов нет (просто клик по кнопке), то выводим кнопку "Далее"
+            if answers:
+                # Если ответы есть, но вопрос не задан (редкий случай)
+                pass
+            else:
+                next_btn = ft.Button(
+                    content=ft.Text("Продолжить →", color=ft.Colors.WHITE),
+                    bgcolor="#5A00FF",
+                    width=200,
+                    on_click=lambda e: self._next_step()
+                )
+                controls.append(ft.Row([next_btn], alignment=ft.MainAxisAlignment.CENTER))
 
         self.interpret_container.controls = [
             ft.Divider(height=1, color="#CED4DA"),
-            ft.Text(f"❓ {question}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
-            ft.Column(controls=answer_buttons, spacing=8),
-        ]
+        ] + controls
         self.page.update()
+
+    def _next_step(self):
+        self.current_command_idx += 1
+        self.interpret_container.controls = []
+        self._show_console()
 
     def _on_interpret(self, ans: dict, button: ft.Control):
         if ans.get("correct"):
             self.current_command_idx += 1
             self.interpret_container.controls = []
-            self.interpret_buttons = []
             self._show_console()
         else:
             # Неправильно — кнопка становится красной
@@ -311,6 +442,7 @@ class SimulatorScreen:
         secs = self.timer_seconds % 60
 
         final_output_text = final_cmd.get("output", "")
+        explanation = final_cmd.get("explanation", "")
 
         card = ft.Container(
             content=ft.Column(
@@ -340,6 +472,20 @@ class SimulatorScreen:
                         border=ft.Border.all(1, "#CED4DA"),
                         border_radius=8,
                         width=550,
+                    ),
+                    ft.Container(height=10),
+                    ft.Container(
+                        content=ft.Text(
+                            f"💡 {explanation}" if explanation else "",
+                            size=13,
+                            color="#0056B3",
+                            selectable=True,
+                        ),
+                        padding=ft.Padding.all(10),
+                        bgcolor="#E7F1FF",
+                        border_radius=8,
+                        width=550,
+                        visible=bool(explanation)
                     ),
                 ],
                 spacing=8,

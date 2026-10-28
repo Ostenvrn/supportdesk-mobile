@@ -1,7 +1,7 @@
 # app.py
 #
 # Точка входа SupportDesk Mobile (Flet 1.0.5).
-# Главный экран + Справочник + Тренажёр (симулятор заявок).
+# Главный экран + Справочник + Тренажёр (обычный и продвинутый).
 
 import flet as ft
 import flet.canvas as cv
@@ -90,7 +90,7 @@ async def main(page: ft.Page):
     )
 
     knowledge_screen_holder = {"instance": None}
-    simulator_screen_holder = {"instance": None}
+    simulator_screen_holder = {"instance": None, "advanced": False}
 
     def set_screen(control: ft.Control):
         switcher.content = control
@@ -133,17 +133,26 @@ async def main(page: ft.Page):
                     content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
                     on_click=lambda e: show_main_screen(),
                 )
-                set_screen(ft.Column(controls=[back_btn, body], expand=True))
+                set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
             elif section == "Тренажёр":
-                if simulator_screen_holder["instance"] is None:
-                    simulator_screen_holder["instance"] = SimulatorScreen(page, on_back=show_main_screen)
+                # Сбрасываем инстанс, чтобы каждый раз начинать заново
+                simulator_screen_holder["instance"] = SimulatorScreen(page, on_back=show_main_screen, is_advanced=False)
                 body = simulator_screen_holder["instance"].build()
                 back_btn = ft.TextButton(
                     content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
                     on_click=lambda e: show_main_screen(),
                 )
-                set_screen(ft.Column(controls=[back_btn, body], expand=True))
+                set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+
+            elif section == "Продвинутый режим":
+                simulator_screen_holder["instance"] = SimulatorScreen(page, on_back=show_main_screen, is_advanced=True)
+                body = simulator_screen_holder["instance"].build()
+                back_btn = ft.TextButton(
+                    content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
+                    on_click=lambda e: show_main_screen(),
+                )
+                set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
             else:
                 page.snack_bar = ft.SnackBar(ft.Text(f"Раздел '{section}' в разработке"))
@@ -167,8 +176,8 @@ async def main(page: ft.Page):
         cards_column = ft.Column(
             controls=[
                 make_card("Справочник", "База знаний и статьи", ft.Icons.MENU_BOOK, "#5A00FF", "Справочник"),
-                make_card("Тренажёр", "Симулятор кейсов L2/L3", ft.Icons.SCHOOL, "#5A00FF", "Тренажёр"),
-                make_card("Продвинутый режим", "Кейсы: МФЦ, школы, ЦИК", ft.Icons.ACCOUNT_BALANCE, "#5A00FF", "Продвинутый режим"),
+                make_card("Тренажёр", "Обычный симулятор кейсов", ft.Icons.SCHOOL, "#5A00FF", "Тренажёр"),
+                make_card("Продвинутый режим", "Сам вводишь команды", ft.Icons.ACCOUNT_BALANCE, "#5A00FF", "Продвинутый режим"),
                 make_card("Прогресс", "Статистика обучения", ft.Icons.BAR_CHART, "#5A00FF", "Прогресс"),
                 make_card("Профиль", "Настройки пользователя", ft.Icons.PERSON, "#5A00FF", "Профиль"),
             ],
