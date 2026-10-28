@@ -60,27 +60,11 @@
 2. Создай виртуальное окружение и активируй его:
    python3 -m venv .venv
    source .venv/bin/activate  # Linux/macOS
-# или .venv\Scripts\activate  # Windows
+   или .venv\Scripts\activate  # Windows
 3. Установи зависимости:
    pip install -r requirements.txt
 4. Запусти приложение:
    python app.py
-
-## Структура проекта
-supportdesk-mobile/
-├── app.py                     # Точка входа (запуск Flet-приложения)
-├── pyproject.toml             # Настройки сборки Flet
-├── requirements.txt           # Зависимости Python
-├── assets/                    # Ресурсы (JSON с данными)
-│   ├── knowledge.json         # База знаний (справочник)
-│   ├── quiz_questions.json    # Вопросы для тестов
-│   ├── cases_simulator.json   # Сценарии заявок (L1-L3)
-│   └── cases_advanced_batch.json # Дополнительные B2B/гос-заявки
-├── app/
-│   ├── core/                  # Логика (хранение, достижения)
-│   ├── ui/                    # Интерфейс (экраны, стили)
-│   └── state.py               # Глобальное состояние
-└── .github/workflows/         # CI/CD (сборка APK)
 
 ## 👨‍💻 Автор
 Чернов Александр
