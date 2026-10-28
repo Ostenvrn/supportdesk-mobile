@@ -1,4 +1,38 @@
+# Виртуальное окружение
 .venv/
+venv/
+env/
+
+# Python кэш
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
+.Python
+*.so
+
+# Flet / сборки
+build/
+dist/
+*.spec
+*.apk
+*.aab
+
+# Базы данных и данные
+*.db
+*.sqlite
+*.sqlite3
+
+# Настройки IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Логи
+*.log
+logs/
