@@ -2,6 +2,7 @@
   "cases": [
     {
       "id": "inc_001",
+      "level": 1,
       "number": "INC-2026-04812",
       "topic": "internet",
       "advanced": false,
@@ -42,6 +43,7 @@
     },
     {
       "id": "inc_002",
+      "level": 1,
       "number": "INC-2026-04813",
       "topic": "internet",
       "advanced": false,
@@ -104,6 +106,7 @@
     },
     {
       "id": "inc_003",
+      "level": 2,
       "number": "INC-2026-04814",
       "topic": "internet",
       "advanced": false,
@@ -154,6 +157,7 @@
     },
     {
       "id": "inc_004",
+      "level": 1,
       "number": "INC-2026-04815",
       "topic": "dns",
       "advanced": false,
@@ -226,6 +230,7 @@
     },
     {
       "id": "inc_005",
+      "level": 2,
       "number": "INC-2026-04816",
       "topic": "dns",
       "advanced": false,
@@ -298,6 +303,7 @@
     },
     {
       "id": "inc_006",
+      "level": 2,
       "number": "INC-2026-04817",
       "topic": "dns",
       "advanced": false,
@@ -359,6 +365,7 @@
     },
     {
       "id": "inc_007",
+      "level": 1,
       "number": "INC-2026-04818",
       "topic": "tv",
       "advanced": false,
@@ -409,6 +416,7 @@
     },
     {
       "id": "inc_008",
+      "level": 1,
       "number": "INC-2026-04819",
       "topic": "tv",
       "advanced": false,
@@ -459,6 +467,7 @@
     },
     {
       "id": "inc_009",
+      "level": 2,
       "number": "INC-2026-04820",
       "topic": "tv",
       "advanced": false,
@@ -509,6 +518,7 @@
     },
     {
       "id": "inc_010",
+      "level": 2,
       "number": "INC-2026-04821",
       "topic": "cameras",
       "advanced": false,
@@ -570,6 +580,7 @@
     },
     {
       "id": "inc_011",
+      "level": 1,
       "number": "INC-2026-04822",
       "topic": "cameras",
       "advanced": false,
@@ -620,6 +631,7 @@
     },
     {
       "id": "inc_012",
+      "level": 2,
       "number": "INC-2026-04823",
       "topic": "cameras",
       "advanced": false,
@@ -681,6 +693,7 @@
     },
     {
       "id": "inc_013",
+      "level": 3,
       "number": "INC-2026-04824",
       "topic": "gov",
       "advanced": true,
@@ -742,6 +755,7 @@
     },
     {
       "id": "inc_014",
+      "level": 3,
       "number": "INC-2026-04825",
       "topic": "gov",
       "advanced": true,
@@ -792,6 +806,7 @@
     },
     {
       "id": "inc_015",
+      "level": 3,
       "number": "INC-2026-04826",
       "topic": "gov",
       "advanced": true,
@@ -853,6 +868,7 @@
     },
     {
       "id": "inc_016",
+      "level": 2,
       "number": "INC-2026-05001",
       "topic": "internet",
       "advanced": false,
@@ -874,7 +890,7 @@
           "id": "cmd_1",
           "name": "show_wifi_info",
           "output": "Текущее подключение:\nSSID: HomeWiFi_5G\nСтандарт: 802.11ac (Wi-Fi 5)\nКанал: 36 (5 ГГц)\nШирина канала: 80 МГц\nСкорость соединения: 866 Мбит/с",
-          "explanation": "Роутер раздает Wi-Fi 5, а не 6. Хотя ноутбук поддерживает 6.",
+          "explanation": "Роутер раздает Wi-Fi 5, а не 6.",
           "question": "В чём может быть проблема?",
           "answers": [
             { "text": "Роутер не настроен на Wi-Fi 6 (или старый)", "correct": true, "next": "cmd_2" },
@@ -885,7 +901,7 @@
           "id": "cmd_2",
           "name": "check_router_model",
           "output": "Модель роутера: TP-Link Archer C6\nПоддержка Wi-Fi 6: НЕТ (только Wi-Fi 5)",
-          "explanation": "Роутер не поддерживает Wi-Fi 6, поэтому ноутбук работает на Wi-Fi 5.",
+          "explanation": "Роутер не поддерживает Wi-Fi 6.",
           "question": "Что рекомендуем абоненту?",
           "answers": [
             { "text": "Заменить роутер на Wi-Fi 6", "correct": true, "next": "cmd_3" },
@@ -903,6 +919,7 @@
     },
     {
       "id": "inc_017",
+      "level": 2,
       "number": "INC-2026-05002",
       "topic": "tv",
       "advanced": false,
@@ -935,7 +952,7 @@
           "id": "cmd_2",
           "name": "check_stb_connection",
           "output": "Подключение приставки: Wi-Fi\nУровень сигнала: -75 dBm (низкий)\nПотери пакетов: 5%",
-          "explanation": "Приставка подключена по слабому Wi-Fi, поэтому картинка сыпется.",
+          "explanation": "Приставка подключена по слабому Wi-Fi.",
           "question": "В чём проблема?",
           "answers": [
             { "text": "Слабый сигнал Wi-Fi", "correct": true, "next": "cmd_3" },
@@ -953,6 +970,7 @@
     },
     {
       "id": "inc_018",
+      "level": 1,
       "number": "INC-2026-05003",
       "topic": "internet",
       "advanced": false,
@@ -974,7 +992,7 @@
           "id": "cmd_1",
           "name": "check_pppoe_session",
           "output": "Статус PPPoE: ОШИБКА 691\nПричина: доступ запрещен (проверьте баланс)",
-          "explanation": "Ошибка 691 часто означает, что на балансе нет денег или неверный пароль.",
+          "explanation": "Ошибка 691 часто означает, что на балансе нет денег.",
           "question": "Что проверяем в CRM?",
           "answers": [
             { "text": "Баланс абонента", "correct": true, "next": "cmd_2" },
@@ -1003,6 +1021,7 @@
     },
     {
       "id": "inc_019",
+      "level": 2,
       "number": "INC-2026-05004",
       "topic": "internet",
       "advanced": false,
@@ -1064,6 +1083,7 @@
     },
     {
       "id": "inc_020",
+      "level": 2,
       "number": "INC-2026-05005",
       "topic": "dns",
       "advanced": false,

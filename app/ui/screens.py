@@ -1,7 +1,7 @@
 # app/ui/screens.py
 #
 # Экраны приложения.
-# Справочник: список категорий -> список статей -> текст статьи.
+# Справочник + Экран выбора тренажёра.
 
 import flet as ft
 
@@ -9,10 +9,6 @@ from app.core.knowledge import get_categories, get_category_by_id
 
 
 class KnowledgeScreen:
-    """
-    Экран "Справочник".
-    """
-
     def __init__(self, page: ft.Page):
         self.page = page
         self.current_category = None
@@ -37,11 +33,8 @@ class KnowledgeScreen:
 
     def show_categories(self):
         categories = get_categories()
-
         if not categories:
-            self.container.content = ft.Text(
-                "База знаний пуста.", color="#666666", italic=True
-            )
+            self.container.content = ft.Text("База знаний пуста.", color="#666666", italic=True)
             self.page.update()
             return
 
@@ -164,8 +157,6 @@ class KnowledgeScreen:
             on_click=lambda e: self.show_articles(category_id),
         )
 
-        # ВАЖНО: ft.padding.all() удалён в Flet 0.85+.
-        # Используем ft.Padding.all() (класс, не модуль).
         self.container.content = ft.Column(
             controls=[
                 back_btn,
@@ -183,3 +174,106 @@ class KnowledgeScreen:
             scroll=ft.ScrollMode.AUTO,
         )
         self.page.update()
+
+
+class SimulatorSelectionScreen:
+    """Экран выбора уровня (L1, L2, L3) и режима (Обычный/Продвинутый)."""
+    def __init__(self, page: ft.Page, on_start_simulator):
+        self.page = page
+        self.on_start_simulator = on_start_simulator # callback (level, is_advanced)
+        self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
+
+    def build(self) -> ft.Control:
+        def make_level_card(level: int, title: str, desc: str, color: str):
+            return ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(icon=ft.Icons.LAYERS, size=40, color=color),
+                        ft.Text(f"Уровень L{level}", size=18, weight=ft.FontWeight.BOLD, color="#333333"),
+                        ft.Text(title, size=14, color=color, weight=ft.FontWeight.BOLD),
+                        ft.Text(desc, size=12, color="#666666", text_align=ft.TextAlign.CENTER),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=5,
+                ),
+                bgcolor="#FFFFFF",
+                padding=20,
+                border_radius=14,
+                width=160,
+                height=160,
+                shadow=ft.BoxShadow(blur_radius=4, color="#00000015"),
+            )
+
+        # Карточки уровней
+        card_l1 = make_level_card(1, "Базовая диагностика", "Кабель, роутер, DNS, простые сбои", "#00A896")
+        card_l2 = make_level_card(2, "Сетевые проблемы", "Wi-Fi, VLAN, скорость, маршруты", "#5A00FF")
+        card_l3 = make_level_card(3, "Инфраструктура", "B2B, VPN, госучреждения, ЭЦП", "#E63946")
+
+        def start_level(level: int, is_advanced: bool):
+            self.on_start_simulator(level, is_advanced)
+
+        # Обработчики для обычного режима
+        card_l1.on_click = lambda e: start_level(1, False)
+        card_l2.on_click = lambda e: start_level(2, False)
+        card_l3.on_click = lambda e: start_level(3, False)
+
+        # Блок выбора режима
+        mode_label = ft.Text("Режим прохождения:", size=16, weight=ft.FontWeight.BOLD, color="#333333")
+        
+        normal_btn = ft.Button(
+            content=ft.Text("Обычный режим (с подсказками)", color="#FFFFFF"),
+            bgcolor="#333333",
+            width=300,
+            height=45,
+            on_click=lambda e: self._show_mode_selection(start_level, is_advanced=False),
+        )
+        
+        advanced_btn = ft.Button(
+            content=ft.Text("Продвинутый режим (ручной ввод)", color="#FFFFFF"),
+            bgcolor="#5A00FF",
+            width=300,
+            height=45,
+            on_click=lambda e: self._show_mode_selection(start_level, is_advanced=True),
+        )
+
+        self.container.content = ft.Column(
+            controls=[
+                ft.Text("Выберите уровень поддержки", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                ft.Container(height=20),
+                ft.Row(controls=[card_l1, card_l2, card_l3], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
+                ft.Container(height=30),
+                mode_label,
+                ft.Container(height=10),
+                ft.Row(controls=[normal_btn, advanced_btn], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            expand=True,
+        )
+        return self.container
+
+    def _show_mode_selection(self, start_callback, is_advanced: bool):
+        """Вспомогательное окно для выбора уровня, если выбран режим."""
+        def make_level_btn(level: int, name: str):
+            return ft.Button(
+                content=ft.Text(f"Уровень L{level} ({name})", color="#FFFFFF"),
+                bgcolor="#5A00FF",
+                width=300,
+                height=45,
+                on_click=lambda e: (self.page.pop_dialog(), start_callback(level, is_advanced)),
+            )
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Выберите уровень"),
+            content=ft.Column(
+                controls=[
+                    make_level_btn(1, "Базовая диагностика"),
+                    make_level_btn(2, "Сетевые проблемы"),
+                    make_level_btn(3, "Инфраструктура"),
+                ],
+                tight=True,
+                spacing=10,
+            ),
+            actions=[ft.TextButton("Отмена", on_click=lambda _: self.page.pop_dialog())],
+        )
+        self.page.show_dialog(dialog)

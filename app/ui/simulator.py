@@ -1,4 +1,9 @@
 # app/ui/simulator.py
+#
+# Симулятор входящих заявок с консолью команд.
+#
+# Новое:
+# - Фильтрация заявок по уровню (L1, L2, L3).
 
 import json
 import random
@@ -11,17 +16,27 @@ from app.core.achievements import check_achievements, save_achievements
 
 
 class SimulatorScreen:
-    def __init__(self, page: ft.Page, on_back, is_advanced: bool = False):
+    def __init__(self, page: ft.Page, on_back, level: int = 1, is_advanced: bool = False):
         self.page = page
         self.on_back = on_back
+        self.level = level
         self.is_advanced = is_advanced
 
-        self.all_cases = self._load_all_cases()
+        # Загружаем ВСЕ кейсы
+        all_cases = self._load_all_cases()
 
-        if self.is_advanced:
-            self.all_cases = [c for c in self.all_cases if c.get("advanced")]
-        else:
-            self.all_cases = [c for c in self.all_cases if not c.get("advanced")]
+        # Фильтруем по уровню (L1, L2, L3) и режиму (обычный/продвинутый)
+        self.all_cases = []
+        for c in all_cases:
+            # Проверка уровня
+            if c.get("level") != self.level:
+                continue
+                
+            # В продвинутом режиме ищем только advanced, в обычном — только не advanced
+            if self.is_advanced and c.get("advanced"):
+                self.all_cases.append(c)
+            elif not self.is_advanced and not c.get("advanced"):
+                self.all_cases.append(c)
 
         self.remaining_ids = [c["id"] for c in self.all_cases]
 
@@ -62,7 +77,15 @@ class SimulatorScreen:
             self.remaining_ids = [c["id"] for c in self.all_cases]
 
         if not self.remaining_ids:
-            self.container.content = ft.Text("Нет доступных заявок для этого режима.")
+            self.container.content = ft.Column(
+                controls=[
+                    ft.Icon(ft.Icons.INFO, size=50, color="orange"),
+                    ft.Text(f"Нет заявок для уровня L{self.level} в этом режиме.", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Button("Назад", on_click=lambda e: self.on_back())
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER
+            )
             self.page.update()
             return
 
@@ -82,7 +105,7 @@ class SimulatorScreen:
         self.console_logs = []
         self.errors_count = 0
 
-        mode_text = "Продвинутый режим" if self.is_advanced else "Обычный режим"
+        mode_text = f"Уровень L{self.level} | " + ("Продвинутый режим" if self.is_advanced else "Обычный режим")
 
         card = ft.Container(
             content=ft.Column(
@@ -182,6 +205,33 @@ class SimulatorScreen:
         if not case:
             return
 
+        billing = case.get("billing", {})
+        ip = billing.get("ip", "Не назначен")
+        session = billing.get("session_status", "Неизвестно")
+        balance = billing.get("balance", "0.00 руб.")
+        services = billing.get("services", "—")
+
+        crm_content = ft.Column(
+            controls=[
+                ft.Text("💳 Биллинг / CRM", size=18, weight=ft.FontWeight.BOLD, color="#5A00FF"),
+                ft.Divider(),
+                self._row_info("IP-адрес:", ip),
+                self._row_info("Сессия:", session),
+                self._row_info("Баланс:", balance),
+                self._row_info("Услуги:", services),
+            ],
+            spacing=10,
+        )
+
+        def open_crm(e):
+            self.page.pop_dialog()
+            crm_dialog = ft.AlertDialog(
+                title=ft.Text("CRM: Личный кабинет абонента"),
+                content=ft.Container(content=crm_content, width=400, padding=10),
+                actions=[ft.TextButton("Закрыть", on_click=lambda _: self.page.pop_dialog())],
+            )
+            self.page.show_dialog(crm_dialog)
+
         bs = ft.BottomSheet(
             ft.Container(
                 padding=20,
@@ -201,11 +251,12 @@ class SimulatorScreen:
                         ft.Text("Жалоба:", size=14, weight=ft.FontWeight.BOLD),
                         ft.Text(case["complaint"], size=14, color="#333333"),
                         ft.Container(height=20),
-                        ft.Button(
-                            "Понятно, закрыть",
-                            bgcolor="#5A00FF",
-                            color=ft.Colors.WHITE,
-                            on_click=lambda _: self.page.pop_dialog()
+                        ft.Row(
+                            controls=[
+                                ft.Button("Посмотреть CRM", icon=ft.Icons.STOREFRONT, bgcolor="#00A896", color=ft.Colors.WHITE, on_click=open_crm),
+                                ft.Button("Закрыть", bgcolor="#CCCCCC", color="#333333", on_click=lambda _: self.page.pop_dialog())
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                         )
                     ],
                     tight=True,
@@ -458,13 +509,12 @@ class SimulatorScreen:
         async def save_result_and_check_achievements():
             progress = await load_progress()
             
-            # Сохраняем результат текущей заявки
             progress[self.current_case["id"]] = {
                 "status": "passed",
                 "time": self.timer_seconds,
                 "number": self.current_case["number"],
                 "topic": self.current_case["topic"],
-                "no_errors": self.errors_count == 0  # Сохраняем флаг для ачивки "Схватываю на лету"
+                "no_errors": self.errors_count == 0
             }
             
             new_achievements = await check_achievements(
