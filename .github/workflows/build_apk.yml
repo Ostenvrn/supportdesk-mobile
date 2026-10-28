@@ -12,15 +12,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Устанавливаем uv (менеджер пакетов, который использует экшен)
+      # Устанавливаем uv (менеджер пакетов, который использует экшен)
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      # 2. Устанавливаем flet-cli в окружение runner'а
-      - name: Install flet-cli
-        run: uv pip install flet-cli --system
-
-      # 3. Теперь запускаем официальный экшен
+      # Запускаем официальный экшен БЕЗ ручной установки flet-cli
       - name: Build APK with Flet
         id: build
         uses: flet-dev/flet-build-action@v1
@@ -30,7 +26,6 @@ jobs:
           bundled-python-version: "3.12"
           build-number: ${{ github.run_number }}
 
-      # 4. Загружаем артефакт
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
