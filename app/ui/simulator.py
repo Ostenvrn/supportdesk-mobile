@@ -1,10 +1,4 @@
 # app/ui/simulator.py
-#
-# Симулятор входящих заявок с консолью команд.
-#
-# Новое:
-# - Учет новых ачивок.
-# - Сохранение флага no_errors.
 
 import json
 import random
@@ -14,6 +8,11 @@ from importlib import resources
 import flet as ft
 from app.core.storage import load_progress, save_progress
 from app.core.achievements import check_achievements, save_achievements
+# Импортируем функции цветов
+from app.ui.theme_colors import (
+    text_primary, text_secondary, text_accent, text_error, 
+    bg_card, bg_card_alt, border_color
+)
 
 
 class SimulatorScreen:
@@ -24,17 +23,13 @@ class SimulatorScreen:
         self.is_advanced = is_advanced
 
         self.all_cases = self._load_all_cases()
-
         if self.is_advanced:
             self.all_cases = [c for c in self.all_cases if c.get("advanced")]
         else:
             self.all_cases = [c for c in self.all_cases if not c.get("advanced")]
-
-        # Фильтруем по уровню
         self.all_cases = [c for c in self.all_cases if c.get("level") == self.level]
 
         self.remaining_ids = [c["id"] for c in self.all_cases]
-
         self.current_case = None
         self.current_command_idx = 0
         self.timer_seconds = 0
@@ -54,7 +49,6 @@ class SimulatorScreen:
                 cases.extend(json.load(f).get("cases", []))
         except Exception as e:
             print(f"Ошибка загрузки основного файла: {e}")
-
         try:
             extra_file = resources.files("assets").joinpath("cases_advanced_batch.json")
             with extra_file.open("r", encoding="utf-8") as f:
@@ -75,7 +69,7 @@ class SimulatorScreen:
             self.container.content = ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.INFO, size=50, color="orange"),
-                    ft.Text(f"Нет заявок для уровня L{self.level} в этом режиме.", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"Нет заявок для уровня L{self.level} в этом режиме.", size=18, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                     ft.Button("Назад", on_click=lambda e: self.on_back())
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -89,7 +83,7 @@ class SimulatorScreen:
 
         case = next((c for c in self.all_cases if c["id"] == case_id), None)
         if not case:
-            self.container.content = ft.Text("Ошибка: заявка не найдена.")
+            self.container.content = ft.Text("Ошибка: заявка не найдена.", color=text_error(self.page))
             self.page.update()
             return
 
@@ -105,32 +99,32 @@ class SimulatorScreen:
         card = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text(mode_text, size=12, color="#888888", weight=ft.FontWeight.BOLD),
+                    ft.Text(mode_text, size=12, color=text_secondary(self.page), weight=ft.FontWeight.BOLD),
                     ft.Row(
                         controls=[
-                            ft.Icon(icon=ft.Icons.ASSIGNMENT, color="#5A00FF", size=28),
-                            ft.Text(f"Заявка {case['number']}", size=18, weight=ft.FontWeight.BOLD, color="#333333"),
+                            ft.Icon(icon=ft.Icons.ASSIGNMENT, color=text_accent(self.page), size=28),
+                            ft.Text(f"Заявка {case['number']}", size=18, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                         ],
                         spacing=10,
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
-                    ft.Divider(height=1, color="#CED4DA"),
+                    ft.Divider(height=1, color=border_color(self.page)),
                     self._row_info("Источник:", case.get("source", "—")),
                     self._row_info("Абонент:", case["subscriber"].get("name", "—")),
                     self._row_info("Адрес:", case["subscriber"].get("address", "—")),
                     self._row_info("Тариф:", case["subscriber"].get("tariff", "—")),
-                    ft.Divider(height=1, color="#CED4DA"),
-                    ft.Text("Жалоба:", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Divider(height=1, color=border_color(self.page)),
+                    ft.Text("Жалоба:", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                     ft.Container(
-                        content=ft.Text(case["complaint"], size=14, color="#333333", selectable=True),
+                        content=ft.Text(case["complaint"], size=14, color=text_primary(self.page), selectable=True),
                         padding=ft.Padding.all(12),
-                        bgcolor="#F8F9FA",
+                        bgcolor=bg_card_alt(self.page),
                         border_radius=8,
                     ),
                 ],
                 spacing=8,
             ),
-            bgcolor="#FFFFFF",
+            bgcolor=bg_card(self.page),
             border_radius=14,
             padding=20,
             width=600,
@@ -147,7 +141,7 @@ class SimulatorScreen:
 
         self.container.content = ft.Column(
             controls=[
-                ft.Text("Входящая заявка", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                ft.Text("Входящая заявка", size=22, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                 ft.Container(height=10),
                 card,
                 ft.Container(height=20),
@@ -163,8 +157,8 @@ class SimulatorScreen:
     def _row_info(self, label: str, value: str) -> ft.Control:
         return ft.Row(
             controls=[
-                ft.Text(label, size=13, color="#666666", width=90),
-                ft.Text(value, size=13, color="#333333", expand=True),
+                ft.Text(label, size=13, color=text_secondary(self.page), width=90),
+                ft.Text(value, size=13, color=text_primary(self.page), expand=True),
             ],
             spacing=5,
         )
@@ -206,10 +200,11 @@ class SimulatorScreen:
         balance = billing.get("balance", "0.00 руб.")
         services = billing.get("services", "—")
 
+        # Цвета для CRM
         crm_content = ft.Column(
             controls=[
-                ft.Text("💳 Биллинг / CRM", size=18, weight=ft.FontWeight.BOLD, color="#5A00FF"),
-                ft.Divider(),
+                ft.Text("💳 Биллинг / CRM", size=18, weight=ft.FontWeight.BOLD, color=text_accent(self.page)),
+                ft.Divider(color=border_color(self.page)),
                 self._row_info("IP-адрес:", ip),
                 self._row_info("Сессия:", session),
                 self._row_info("Баланс:", balance),
@@ -221,8 +216,9 @@ class SimulatorScreen:
         def open_crm(e):
             self.page.pop_dialog()
             crm_dialog = ft.AlertDialog(
-                title=ft.Text("CRM: Личный кабинет абонента"),
-                content=ft.Container(content=crm_content, width=400, padding=10),
+                title=ft.Text("CRM: Личный кабинет абонента", color=text_primary(self.page)),
+                content=ft.Container(content=crm_content, width=400, padding=10, bgcolor=bg_card(self.page)),
+                bgcolor=bg_card(self.page),
                 actions=[ft.TextButton("Закрыть", on_click=lambda _: self.page.pop_dialog())],
             )
             self.page.show_dialog(crm_dialog)
@@ -230,26 +226,27 @@ class SimulatorScreen:
         bs = ft.BottomSheet(
             ft.Container(
                 padding=20,
+                bgcolor=bg_card(self.page),
                 content=ft.Column(
                     controls=[
                         ft.Row(
                             controls=[
-                                ft.Icon(icon=ft.Icons.ASSIGNMENT, color="#5A00FF"),
-                                ft.Text(f"Заявка {case['number']}", size=18, weight=ft.FontWeight.BOLD),
+                                ft.Icon(icon=ft.Icons.ASSIGNMENT, color=text_accent(self.page)),
+                                ft.Text(f"Заявка {case['number']}", size=18, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                             ],
                         ),
-                        ft.Divider(),
-                        ft.Text(f"Абонент: {case['subscriber'].get('name', '—')}", size=14),
-                        ft.Text(f"Адрес: {case['subscriber'].get('address', '—')}", size=14),
-                        ft.Text(f"Тариф: {case['subscriber'].get('tariff', '—')}", size=14),
-                        ft.Divider(),
-                        ft.Text("Жалоба:", size=14, weight=ft.FontWeight.BOLD),
-                        ft.Text(case["complaint"], size=14, color="#333333"),
+                        ft.Divider(color=border_color(self.page)),
+                        ft.Text(f"Абонент: {case['subscriber'].get('name', '—')}", size=14, color=text_primary(self.page)),
+                        ft.Text(f"Адрес: {case['subscriber'].get('address', '—')}", size=14, color=text_primary(self.page)),
+                        ft.Text(f"Тариф: {case['subscriber'].get('tariff', '—')}", size=14, color=text_primary(self.page)),
+                        ft.Divider(color=border_color(self.page)),
+                        ft.Text("Жалоба:", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                        ft.Text(case["complaint"], size=14, color=text_primary(self.page)),
                         ft.Container(height=20),
                         ft.Row(
                             controls=[
                                 ft.Button("Посмотреть CRM", icon=ft.Icons.STOREFRONT, bgcolor="#00A896", color=ft.Colors.WHITE, on_click=open_crm),
-                                ft.Button("Закрыть", bgcolor="#CCCCCC", color="#333333", on_click=lambda _: self.page.pop_dialog())
+                                ft.Button("Закрыть", bgcolor="#555555", color=ft.Colors.WHITE, on_click=lambda _: self.page.pop_dialog())
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                         )
@@ -284,7 +281,7 @@ class SimulatorScreen:
 
         self.timer_text = ft.Text(
             f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}",
-            size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
+            size=14, color=text_accent(self.page), weight=ft.FontWeight.BOLD,
         )
 
         controls_panel = []
@@ -327,7 +324,7 @@ class SimulatorScreen:
                     spacing=5,
                 )
             )
-            controls_panel.append(ft.Text(f"Подсказка: проверьте логи и введите нужную команду.", size=12, italic=True, color="#888888"))
+            controls_panel.append(ft.Text(f"Подсказка: проверьте логи и введите нужную команду.", size=12, italic=True, color=text_secondary(self.page)))
         else:
             cmd_btn = ft.Button(
                 content=ft.Text(f"▶ Выполнить: {cmd['name']}", size=13, color="#FFFFFF"),
@@ -339,7 +336,7 @@ class SimulatorScreen:
             controls_panel.append(
                 ft.Column(
                     controls=[
-                        ft.Text(f"Доступная команда:", size=13, weight=ft.FontWeight.BOLD, color="#333333"),
+                        ft.Text(f"Доступная команда:", size=13, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                         cmd_btn
                     ],
                     spacing=5,
@@ -352,11 +349,11 @@ class SimulatorScreen:
 
         top_panel = ft.Row(
             controls=[
-                ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
+                ft.Text(f"Заявка {self.current_case['number']}", size=13, color=text_secondary(self.page)),
                 ft.TextButton(
                     "Посмотреть заявку",
                     icon=ft.Icons.VISIBILITY,
-                    style=ft.ButtonStyle(color="#5A00FF"),
+                    style=ft.ButtonStyle(color=text_accent(self.page)),
                     on_click=self._show_ticket_info
                 ),
                 ft.Container(expand=True),
@@ -384,7 +381,7 @@ class SimulatorScreen:
                 ],
                 spacing=8,
             ),
-            bgcolor="#FFFFFF",
+            bgcolor=bg_card(self.page),
             border_radius=14,
             padding=20,
             width=650,
@@ -426,9 +423,9 @@ class SimulatorScreen:
         if explanation:
             controls.append(
                 ft.Container(
-                    content=ft.Text(f"💡 {explanation}", size=13, color="#0056B3", selectable=True),
+                    content=ft.Text(f"💡 {explanation}", size=13, color=text_primary(self.page), selectable=True),
                     padding=ft.Padding.all(10),
-                    bgcolor="#E7F1FF",
+                    bgcolor=bg_card_alt(self.page),
                     border_radius=8,
                     width=500
                 )
@@ -438,8 +435,8 @@ class SimulatorScreen:
             answer_buttons = []
             for ans in answers:
                 btn = ft.Button(
-                    content=ft.Text(ans["text"], size=13, color="#333333", text_align=ft.TextAlign.LEFT),
-                    bgcolor="#F8F9FA",
+                    content=ft.Text(ans["text"], size=13, color=text_primary(self.page), text_align=ft.TextAlign.LEFT),
+                    bgcolor=bg_card_alt(self.page),
                     width=500,
                     height=40,
                     on_click=lambda e, a=ans: self._on_interpret(a, e.control),
@@ -449,7 +446,7 @@ class SimulatorScreen:
             controls.append(
                 ft.Column(
                     controls=[
-                        ft.Text(f"❓ {question}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                        ft.Text(f"❓ {question}", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                         ft.Column(controls=answer_buttons, spacing=8),
                     ],
                     spacing=8
@@ -468,7 +465,7 @@ class SimulatorScreen:
                 controls.append(ft.Row([next_btn], alignment=ft.MainAxisAlignment.CENTER))
 
         self.interpret_container.controls = [
-            ft.Divider(height=1, color="#CED4DA"),
+            ft.Divider(height=1, color=border_color(self.page)),
         ] + controls
         self.page.update()
 
@@ -551,26 +548,26 @@ class SimulatorScreen:
                     ft.Row(
                         controls=[
                             ft.Icon(icon=ft.Icons.CHECK_CIRCLE, color="#00A896", size=36),
-                            ft.Text("Заявка закрыта!", size=20, weight=ft.FontWeight.BOLD, color="#333333"),
+                            ft.Text("Заявка закрыта!", size=20, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                         ],
                         spacing=10,
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
-                    ft.Text(f"Заявка {self.current_case['number']}", size=13, color="#666666"),
-                    ft.Text(f"Время решения: {mins:02d}:{secs:02d}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD),
-                    ft.Divider(height=1, color="#CED4DA"),
-                    ft.Text("Финальный шаг:", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Text(f"Заявка {self.current_case['number']}", size=13, color=text_secondary(self.page)),
+                    ft.Text(f"Время решения: {mins:02d}:{secs:02d}", size=14, color=text_accent(self.page), weight=ft.FontWeight.BOLD),
+                    ft.Divider(height=1, color=border_color(self.page)),
+                    ft.Text("Финальный шаг:", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                     ft.Container(
                         content=ft.Text(
                             final_output_text,
                             size=13,
-                            color="#333333",
+                            color=text_primary(self.page),
                             selectable=True,
                             font_family="Courier New",
                         ),
                         padding=ft.Padding.all(12),
-                        bgcolor="#F8F9FA",
-                        border=ft.Border.all(1, "#CED4DA"),
+                        bgcolor=bg_card_alt(self.page),
+                        border=ft.Border.all(1, border_color(self.page)),
                         border_radius=8,
                         width=550,
                     ),
@@ -579,11 +576,11 @@ class SimulatorScreen:
                         content=ft.Text(
                             f"💡 {explanation}" if explanation else "",
                             size=13,
-                            color="#0056B3",
+                            color=text_primary(self.page),
                             selectable=True,
                         ),
                         padding=ft.Padding.all(10),
-                        bgcolor="#E7F1FF",
+                        bgcolor=bg_card_alt(self.page),
                         border_radius=8,
                         width=550,
                         visible=bool(explanation)
@@ -592,7 +589,7 @@ class SimulatorScreen:
                 spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor="#FFFFFF",
+            bgcolor=bg_card(self.page),
             border_radius=14,
             padding=20,
             width=600,
@@ -610,8 +607,8 @@ class SimulatorScreen:
         back_btn = ft.TextButton(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"),
-                    ft.Text("На главную", color="#5A00FF", size=14),
+                    ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(self.page)),
+                    ft.Text("На главную", color=text_accent(self.page), size=14),
                 ],
                 spacing=5,
             ),

@@ -1,10 +1,12 @@
 # app/ui/progress.py
-#
-# Экран "Прогресс" — статистика по заявкам + результаты тестов.
 
 import flet as ft
 from app.core.storage import load_progress, load_quiz_results
 from app.core.achievements import get_all_achievements
+from app.ui.theme_colors import (
+    text_primary, text_secondary, text_accent, text_error, text_success, 
+    bg_card, bg_card_alt, border_color
+)
 
 
 class ProgressScreen:
@@ -17,10 +19,8 @@ class ProgressScreen:
         self.progress_data = await load_progress()
         quiz_results = await load_quiz_results()
 
-        # Исключаем служебный ключ с ачивками
         cases_data = {k: v for k, v in self.progress_data.items() if not k.startswith("__")}
         total_cases = len(cases_data)
-        
         earned_achievements = self.progress_data.get("__achievements__", [])
         all_achievements = get_all_achievements()
 
@@ -28,8 +28,8 @@ class ProgressScreen:
         if total_cases == 0:
             cases_section = ft.Column(
                 controls=[
-                    ft.Icon(icon=ft.Icons.INSIGHTS, size=60, color="#CCCCCC"),
-                    ft.Text("Пока нет пройденных заявок", size=18, weight=ft.FontWeight.BOLD, color="#666666"),
+                    ft.Icon(icon=ft.Icons.INSIGHTS, size=60, color=text_secondary(self.page)),
+                    ft.Text("Пока нет пройденных заявок", size=18, weight=ft.FontWeight.BOLD, color=text_secondary(self.page)),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=10,
@@ -52,19 +52,19 @@ class ProgressScreen:
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(icon=ft.Icons.CHECK_CIRCLE, color="#00A896", size=24),
+                                ft.Icon(icon=ft.Icons.CHECK_CIRCLE, color=text_success(self.page), size=24),
                                 ft.Column(
                                     controls=[
-                                        ft.Text(f"Заявка {data.get('number', case_id)}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
-                                        ft.Text(f"Тема: {data.get('topic', '—')}", size=12, color="#666666"),
+                                        ft.Text(f"Заявка {data.get('number', case_id)}", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                                        ft.Text(f"Тема: {data.get('topic', '—')}", size=12, color=text_secondary(self.page)),
                                     ],
                                     spacing=2,
                                     expand=True,
                                 ),
-                                ft.Text(f"{mins:02d}:{secs:02d}", size=14, color="#5A00FF", weight=ft.FontWeight.BOLD),
+                                ft.Text(f"{mins:02d}:{secs:02d}", size=14, color=text_accent(self.page), weight=ft.FontWeight.BOLD),
                             ],
                         ),
-                        bgcolor="#FFFFFF",
+                        bgcolor=bg_card(self.page),
                         padding=15,
                         border_radius=8,
                         width=500,
@@ -81,20 +81,20 @@ class ProgressScreen:
             stats_card = ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.Column(controls=[ft.Text(str(total_cases), size=28, weight=ft.FontWeight.BOLD, color="#5A00FF"), ft.Text("Решено заявок", size=12, color="#666666")], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        ft.Container(width=1, height=40, bgcolor="#CED4DA"),
-                        ft.Column(controls=[ft.Text(f"{avg_mins:02d}:{avg_secs:02d}", size=28, weight=ft.FontWeight.BOLD, color="#5A00FF"), ft.Text("Среднее время", size=12, color="#666666")], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        ft.Container(width=1, height=40, bgcolor="#CED4DA"),
-                        ft.Column(controls=[ft.Text(f"{best_mins:02d}:{best_secs:02d}", size=28, weight=ft.FontWeight.BOLD, color="#00A896"), ft.Text("Лучшее время", size=12, color="#666666")], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Column(controls=[ft.Text(str(total_cases), size=28, weight=ft.FontWeight.BOLD, color=text_accent(self.page)), ft.Text("Решено заявок", size=12, color=text_secondary(self.page))], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Container(width=1, height=40, bgcolor=border_color(self.page)),
+                        ft.Column(controls=[ft.Text(f"{avg_mins:02d}:{avg_secs:02d}", size=28, weight=ft.FontWeight.BOLD, color=text_accent(self.page)), ft.Text("Среднее время", size=12, color=text_secondary(self.page))], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Container(width=1, height=40, bgcolor=border_color(self.page)),
+                        ft.Column(controls=[ft.Text(f"{best_mins:02d}:{best_secs:02d}", size=28, weight=ft.FontWeight.BOLD, color=text_success(self.page)), ft.Text("Лучшее время", size=12, color=text_secondary(self.page))], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                 ),
-                bgcolor="#FFFFFF", padding=20, border_radius=14, width=600, shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
+                bgcolor=bg_card(self.page), padding=20, border_radius=14, width=600, shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
             )
 
             list_card = ft.Container(
-                content=ft.Column(controls=[ft.Text("История решений:", size=16, weight=ft.FontWeight.BOLD, color="#333333"), ft.Container(height=10), ft.Column(controls=list_items, spacing=10, scroll=ft.ScrollMode.AUTO)]),
-                bgcolor="#F4F6F9", width=600,
+                content=ft.Column(controls=[ft.Text("История решений:", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)), ft.Container(height=10), ft.Column(controls=list_items, spacing=10, scroll=ft.ScrollMode.AUTO)]),
+                bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
             )
 
             cases_section = ft.Column(controls=[stats_card, ft.Container(height=20), list_card])
@@ -108,37 +108,37 @@ class ProgressScreen:
                 ft.Container(
                     content=ft.Column(
                         controls=[
-                            ft.Text(ach["icon"], size=30, color=None if is_earned else "#CCCCCC"),
-                            ft.Text(ach["title"], size=12, weight=ft.FontWeight.BOLD, color="#333333" if is_earned else "#999999", text_align=ft.TextAlign.CENTER),
+                            ft.Text(ach["icon"], size=30, color=None if is_earned else "#555555"),
+                            ft.Text(ach["title"], size=12, weight=ft.FontWeight.BOLD, color=text_primary(self.page) if is_earned else text_secondary(self.page), text_align=ft.TextAlign.CENTER),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=4,
                     ),
-                    bgcolor="#FFFFFF" if is_earned else "#F0F0F0",
+                    bgcolor=bg_card(self.page) if is_earned else bg_card_alt(self.page),
                     padding=10, border_radius=8, width=100, height=100,
-                    alignment=ft.Alignment.CENTER, opacity=1.0 if is_earned else 0.6,
+                    alignment=ft.Alignment.CENTER, opacity=1.0 if is_earned else 0.5,
                 )
             )
 
         ach_section = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("🏆 Достижения", size=16, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Text("🏆 Достижения", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                     ft.Container(height=10),
                     ft.Row(controls=ach_cards, wrap=True, spacing=10, alignment=ft.MainAxisAlignment.CENTER)
                 ]
             ),
-            bgcolor="#F4F6F9", width=600,
+            bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
         )
 
         # --- Блок тестов ---
         quiz_items = []
         if not quiz_results:
-            quiz_items.append(ft.Text("Тесты ещё не проходились.", color="#666666", italic=True))
+            quiz_items.append(ft.Text("Тесты ещё не проходились.", color=text_secondary(self.page), italic=True))
         else:
             for res in reversed(quiz_results):
                 is_passed = res["correct"] >= 15
-                color = "#00A896" if is_passed else "#E63946"
+                color = text_success(self.page) if is_passed else text_error(self.page)
                 icon = ft.Icons.CHECK_CIRCLE if is_passed else ft.Icons.CANCEL
                 quiz_items.append(
                     ft.Container(
@@ -147,33 +147,32 @@ class ProgressScreen:
                                 ft.Icon(icon=icon, color=color, size=24),
                                 ft.Column(
                                     controls=[
-                                        ft.Text(f"Тест L{res['level']}", size=14, weight=ft.FontWeight.BOLD),
-                                        ft.Text(f"{res['date']}", size=12, color="#666666"),
+                                        ft.Text(f"Тест L{res['level']}", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                                        ft.Text(f"{res['date']}", size=12, color=text_secondary(self.page)),
                                     ],
                                     spacing=2, expand=True,
                                 ),
                                 ft.Text(f"{res['correct']}/{res['total']}", size=14, weight=ft.FontWeight.BOLD, color=color),
                             ],
                         ),
-                        bgcolor="#FFFFFF", padding=15, border_radius=8, width=500, shadow=ft.BoxShadow(blur_radius=2, color="#00000010"),
+                        bgcolor=bg_card(self.page), padding=15, border_radius=8, width=500, shadow=ft.BoxShadow(blur_radius=2, color="#00000010"),
                     )
                 )
 
         quiz_section = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("📝 Результаты тестов", size=16, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Text("📝 Результаты тестов", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                     ft.Container(height=10),
                     ft.Column(controls=quiz_items, spacing=10),
                 ]
             ),
-            bgcolor="#F4F6F9", width=600,
+            bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
         )
 
-        # --- Собираем всё вместе ---
         self.container.content = ft.Column(
             controls=[
-                ft.Text("Мой прогресс", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                ft.Text("Мой прогресс", size=22, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                 ft.Container(height=10),
                 cases_section,
                 ft.Container(height=20),
