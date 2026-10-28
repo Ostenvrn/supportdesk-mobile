@@ -65,15 +65,13 @@ async def reset_all_data():
         await prefs.set("profile_name", "")
         await prefs.set("progress_data", "{}")
         await prefs.set("dark_theme", False)
-        await prefs.set("quiz_results", "[]") # Очищаем и тесты
+        await prefs.set("quiz_results", "[]")
+        await prefs.set("articles_read", "[]")
     except Exception as e:
         print(f"Ошибка сброса данных: {e}")
 
 
-# --- Новые функции для тестов ---
-
 async def load_quiz_results() -> list:
-    """Загружает историю результатов тестов."""
     try:
         prefs = ft.SharedPreferences()
         raw = await prefs.get("quiz_results")
@@ -86,7 +84,6 @@ async def load_quiz_results() -> list:
 
 
 async def save_quiz_result(level: int, correct: int, total: int, time_spent: int):
-    """Сохраняет результат нового теста."""
     try:
         history = await load_quiz_results()
         from datetime import datetime
@@ -102,3 +99,30 @@ async def save_quiz_result(level: int, correct: int, total: int, time_spent: int
         await prefs.set("quiz_results", json.dumps(history))
     except Exception as e:
         print(f"Ошибка сохранения результата теста: {e}")
+
+
+# --- Учёт прочитанных статей ---
+
+async def load_articles_read() -> list:
+    """Возвращает список ID прочитанных статей (category_id + article_idx)."""
+    try:
+        prefs = ft.SharedPreferences()
+        raw = await prefs.get("articles_read")
+        if raw:
+            return json.loads(raw)
+        return []
+    except Exception:
+        return []
+
+
+async def mark_article_read(category_id: str, article_idx: int):
+    """Отмечает статью как прочитанную."""
+    try:
+        read_list = await load_articles_read()
+        article_id = f"{category_id}_{article_idx}"
+        if article_id not in read_list:
+            read_list.append(article_id)
+            prefs = ft.SharedPreferences()
+            await prefs.set("articles_read", json.dumps(read_list))
+    except Exception as e:
+        print(f"Ошибка сохранения прочитанной статьи: {e}")

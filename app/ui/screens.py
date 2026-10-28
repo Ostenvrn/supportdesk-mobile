@@ -1,13 +1,14 @@
 # app/ui/screens.py
 #
 # Экраны приложения:
-# - KnowledgeScreen (Справочник с поиском)
+# - KnowledgeScreen (Справочник с поиском и отметкой о прочтении)
 # - SimulatorSelectionScreen (Выбор уровня L1/L2/L3 для тренажёра)
 # - QuizSelectionScreen (Выбор уровня для теста)
 
 import flet as ft
 
 from app.core.knowledge import get_categories, get_category_by_id, search_knowledge
+from app.core.storage import mark_article_read
 
 
 class KnowledgeScreen:
@@ -221,6 +222,9 @@ class KnowledgeScreen:
         self.search_results_container.visible = False
         self.categories_container.visible = True
 
+        # Отмечаем статью как прочитанную (для ачивки "Книжный червь")
+        self.page.run_task(mark_article_read, category_id, article_idx)
+
         category = get_category_by_id(category_id)
         if not category:
             return
@@ -418,7 +422,7 @@ class QuizSelectionScreen:
                 ft.Text("Выберите уровень теста", size=22, weight=ft.FontWeight.BOLD),
                 ft.Container(height=20),
                 ft.Row(controls=[card_l1, card_l2, card_l3], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
-                ft.Text("Каждый тест содержит вопросы только для выбранного уровня.", size=12, color="#666666"),
+                ft.Text("Каждый тест содержит 20 случайных вопросов для выбранного уровня.", size=12, color="#666666"),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,

@@ -3,7 +3,8 @@
 # Симулятор входящих заявок с консолью команд.
 #
 # Новое:
-# - Фильтрация заявок по уровню (L1, L2, L3).
+# - Учет новых ачивок.
+# - Сохранение флага no_errors.
 
 import json
 import random
@@ -22,21 +23,15 @@ class SimulatorScreen:
         self.level = level
         self.is_advanced = is_advanced
 
-        # Загружаем ВСЕ кейсы
-        all_cases = self._load_all_cases()
+        self.all_cases = self._load_all_cases()
 
-        # Фильтруем по уровню (L1, L2, L3) и режиму (обычный/продвинутый)
-        self.all_cases = []
-        for c in all_cases:
-            # Проверка уровня
-            if c.get("level") != self.level:
-                continue
-                
-            # В продвинутом режиме ищем только advanced, в обычном — только не advanced
-            if self.is_advanced and c.get("advanced"):
-                self.all_cases.append(c)
-            elif not self.is_advanced and not c.get("advanced"):
-                self.all_cases.append(c)
+        if self.is_advanced:
+            self.all_cases = [c for c in self.all_cases if c.get("advanced")]
+        else:
+            self.all_cases = [c for c in self.all_cases if not c.get("advanced")]
+
+        # Фильтруем по уровню
+        self.all_cases = [c for c in self.all_cases if c.get("level") == self.level]
 
         self.remaining_ids = [c["id"] for c in self.all_cases]
 
@@ -58,7 +53,7 @@ class SimulatorScreen:
             with data_file.open("r", encoding="utf-8") as f:
                 cases.extend(json.load(f).get("cases", []))
         except Exception as e:
-            print(f"Ошибка загрузки: {e}")
+            print(f"Ошибка загрузки основного файла: {e}")
 
         try:
             extra_file = resources.files("assets").joinpath("cases_advanced_batch.json")
