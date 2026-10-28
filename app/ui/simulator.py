@@ -126,7 +126,6 @@ class SimulatorScreen:
             bgcolor=bg_card(self.page),
             border_radius=14,
             padding=20,
-            width=600,
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
@@ -215,7 +214,7 @@ class SimulatorScreen:
             self.page.pop_dialog()
             crm_dialog = ft.AlertDialog(
                 title=ft.Text("CRM: Личный кабинет абонента", color=text_primary(self.page)),
-                content=ft.Container(content=crm_content, width=400, padding=10, bgcolor=bg_card(self.page)),
+                content=ft.Container(content=crm_content, width=300, padding=10, bgcolor=bg_card(self.page)),
                 bgcolor=bg_card(self.page),
                 actions=[ft.TextButton("Закрыть", on_click=lambda _: self.page.pop_dialog())],
             )
@@ -286,7 +285,7 @@ class SimulatorScreen:
 
         if self.is_advanced:
             cmd_input = ft.TextField(
-                hint_text="Введите команду (например: ping 8.8.8.8)",
+                hint_text="Введите команду...",
                 expand=True,
                 bgcolor="#2D2D2D",
                 color="#FFFFFF",
@@ -327,7 +326,6 @@ class SimulatorScreen:
             cmd_btn = ft.Button(
                 content=ft.Text(f"▶ Выполнить: {cmd['name']}", size=13, color="#FFFFFF"),
                 bgcolor="#333333",
-                width=500,
                 height=40,
                 on_click=lambda e, c=cmd: self._execute_command(c),
             )
@@ -349,7 +347,7 @@ class SimulatorScreen:
             controls=[
                 ft.Text(f"Заявка {self.current_case['number']}", size=13, color=text_secondary(self.page)),
                 ft.TextButton(
-                    "Посмотреть заявку",
+                    "Заявка",
                     icon=ft.Icons.VISIBILITY,
                     style=ft.ButtonStyle(color=text_accent(self.page)),
                     on_click=self._show_ticket_info
@@ -371,7 +369,7 @@ class SimulatorScreen:
                         border_radius=8,
                         padding=15,
                         height=200,
-                        width=600,
+                        expand=True,
                     ),
                     ft.Container(height=10),
                     ft.Column(controls=controls_panel, spacing=10),
@@ -382,7 +380,6 @@ class SimulatorScreen:
             bgcolor=bg_card(self.page),
             border_radius=14,
             padding=20,
-            width=650,
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
@@ -425,7 +422,6 @@ class SimulatorScreen:
                     padding=ft.Padding.all(10),
                     bgcolor=bg_card_alt(self.page),
                     border_radius=8,
-                    width=500
                 )
             )
 
@@ -435,7 +431,6 @@ class SimulatorScreen:
                 btn = ft.Button(
                     content=ft.Text(ans["text"], size=13, color=text_primary(self.page), text_align=ft.TextAlign.LEFT),
                     bgcolor=bg_card_alt(self.page),
-                    width=500,
                     height=40,
                     on_click=lambda e, a=ans: self._on_interpret(a, e.control),
                 )
@@ -527,7 +522,7 @@ class SimulatorScreen:
                 self.page.snack_bar = ft.SnackBar(
                     content=ft.Text(f"🏆 Получены достижения: {ach_names}", color=ft.Colors.WHITE),
                     bgcolor="#5A00FF",
-                    duration=2000, # 2 секунды
+                    duration=2000,
                 )
                 self.page.snack_bar.open = True
                 self.page.update()
@@ -567,7 +562,6 @@ class SimulatorScreen:
                         bgcolor=bg_card_alt(self.page),
                         border=ft.Border.all(1, border_color(self.page)),
                         border_radius=8,
-                        width=550,
                     ),
                     ft.Container(height=10),
                     ft.Container(
@@ -580,7 +574,6 @@ class SimulatorScreen:
                         padding=ft.Padding.all(10),
                         bgcolor=bg_card_alt(self.page),
                         border_radius=8,
-                        width=550,
                         visible=bool(explanation)
                     ),
                 ],
@@ -590,7 +583,6 @@ class SimulatorScreen:
             bgcolor=bg_card(self.page),
             border_radius=14,
             padding=20,
-            width=600,
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 

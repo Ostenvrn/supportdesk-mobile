@@ -67,7 +67,6 @@ class ProgressScreen:
                         bgcolor=bg_card(self.page),
                         padding=15,
                         border_radius=8,
-                        width=500, # Чуть уменьшим для мобилки
                         shadow=ft.BoxShadow(blur_radius=2, color="#00000010"),
                     )
                 )
@@ -81,20 +80,20 @@ class ProgressScreen:
             stats_card = ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.Column(controls=[ft.Text(str(total_cases), size=24, weight=ft.FontWeight.BOLD, color=text_accent(self.page)), ft.Text("Решено заявок", size=10, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER)], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Column(controls=[ft.Text(str(total_cases), size=24, weight=ft.FontWeight.BOLD, color=text_accent(self.page)), ft.Text("Решено", size=10, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER)], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                         ft.Container(width=1, height=40, bgcolor=border_color(self.page)),
-                        ft.Column(controls=[ft.Text(f"{avg_mins:02d}:{avg_secs:02d}", size=24, weight=ft.FontWeight.BOLD, color=text_accent(self.page)), ft.Text("Среднее время", size=10, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER)], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Column(controls=[ft.Text(f"{avg_mins:02d}:{avg_secs:02d}", size=24, weight=ft.FontWeight.BOLD, color=text_accent(self.page)), ft.Text("Среднее", size=10, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER)], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                         ft.Container(width=1, height=40, bgcolor=border_color(self.page)),
-                        ft.Column(controls=[ft.Text(f"{best_mins:02d}:{best_secs:02d}", size=24, weight=ft.FontWeight.BOLD, color=text_success(self.page)), ft.Text("Лучшее время", size=10, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER)], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Column(controls=[ft.Text(f"{best_mins:02d}:{best_secs:02d}", size=24, weight=ft.FontWeight.BOLD, color=text_success(self.page)), ft.Text("Лучшее", size=10, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER)], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                 ),
-                bgcolor=bg_card(self.page), padding=15, border_radius=14, width=500, shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
+                bgcolor=bg_card(self.page), padding=15, border_radius=14, shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
             )
 
             list_card = ft.Container(
-                content=ft.Column(controls=[ft.Text("История решений:", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)), ft.Container(height=10), ft.Column(controls=list_items, spacing=10)]),
-                bgcolor=bg_card_alt(self.page), width=500, padding=15, border_radius=10,
+                content=ft.Column(controls=[ft.Text("История решений:", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)), ft.Container(height=10), ft.Column(controls=list_items, spacing=10, scroll=ft.ScrollMode.AUTO)]),
+                bgcolor=bg_card_alt(self.page), padding=15, border_radius=10,
             )
 
             cases_section = ft.Column(
@@ -102,46 +101,66 @@ class ProgressScreen:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             )
 
-        # --- Блок ачивок (АДАПТИВНЫЙ) ---
-        earned_ids = [a["id"] for a in earned_achievements]
-        ach_cards = []
-        for ach in all_achievements:
-            is_earned = ach["id"] in earned_ids
-            
-            card = ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Text(ach["icon"], size=24, color=None if is_earned else "#555555"),
-                                ft.Text(ach["title"], size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page) if is_earned else text_secondary(self.page), expand=True),
-                            ],
-                            spacing=10,
-                            alignment=ft.MainAxisAlignment.START,
-                        ),
-                        ft.Text(ach["description"], size=11, color=text_secondary(self.page) if is_earned else "#777777"),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=5,
-                ),
-                bgcolor=bg_card(self.page) if is_earned else bg_card_alt(self.page),
-                padding=12, border_radius=8,
-                # АДАПТИВНОСТЬ: на мобилке 1 в ряд, на планшете 2, на ПК 3
-                col={"xs": 12, "sm": 6, "md": 4},
-                opacity=1.0 if is_earned else 0.5,
-            )
-            ach_cards.append(card)
+        # --- Кнопка "Достижения" (вызывает модальное окно) ---
+        def show_achievements(e):
+            earned_ids = [a["id"] for a in earned_achievements]
+            ach_cards = []
+            for ach in all_achievements:
+                is_earned = ach["id"] in earned_ids
+                card = ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text(ach["icon"], size=24, color=None if is_earned else "#555555"),
+                                    ft.Text(ach["title"], size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page) if is_earned else text_secondary(self.page), expand=True),
+                                ],
+                                spacing=10,
+                            ),
+                            ft.Text(ach["description"], size=11, color=text_secondary(self.page) if is_earned else "#777777"),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=5,
+                    ),
+                    bgcolor=bg_card(self.page) if is_earned else bg_card_alt(self.page),
+                    padding=12, border_radius=8,
+                    col={"xs": 12, "sm": 6},
+                    opacity=1.0 if is_earned else 0.5,
+                )
+                ach_cards.append(card)
 
-        ach_section = ft.Container(
-            content=ft.Column(
+            dialog = ft.AlertDialog(
+                title=ft.Text("🏆 Достижения", color=text_primary(self.page)),
+                content=ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Text(f"Получено: {len(earned_achievements)} из {len(all_achievements)}", size=14, color=text_secondary(self.page)),
+                            ft.Container(height=10),
+                            ft.ResponsiveRow(controls=ach_cards, spacing=10, run_spacing=10),
+                        ],
+                        scroll=ft.ScrollMode.AUTO,
+                    ),
+                    width=600,
+                    height=500,
+                ),
+                bgcolor=text_secondary(self.page) if self.page.theme_mode == ft.ThemeMode.LIGHT else "#1E1E1E",
+                actions=[
+                    ft.TextButton("Закрыть", on_click=lambda _: self.page.pop_dialog(), style=ft.ButtonStyle(color=text_accent(self.page)))
+                ],
+            )
+            self.page.show_dialog(dialog)
+
+        ach_button = ft.Button(
+            content=ft.Row(
                 controls=[
-                    ft.Text("🏆 Достижения", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
-                    ft.Container(height=10),
-                    # Используем ResponsiveRow вместо Row
-                    ft.ResponsiveRow(controls=ach_cards, spacing=10, run_spacing=10)
-                ]
+                    ft.Icon(ft.Icons.EMOJI_EVENTS, color=ft.Colors.WHITE),
+                    ft.Text("Посмотреть достижения", color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
             ),
-            bgcolor=bg_card_alt(self.page), width=500, padding=15, border_radius=10,
+            bgcolor="#5A00FF",
+            height=50,
+            on_click=show_achievements,
         )
 
         # --- Блок тестов ---
@@ -168,7 +187,7 @@ class ProgressScreen:
                                 ft.Text(f"{res['correct']}/{res['total']}", size=14, weight=ft.FontWeight.BOLD, color=color),
                             ],
                         ),
-                        bgcolor=bg_card(self.page), padding=15, border_radius=8, width=500, shadow=ft.BoxShadow(blur_radius=2, color="#00000010"),
+                        bgcolor=bg_card(self.page), padding=15, border_radius=8, shadow=ft.BoxShadow(blur_radius=2, color="#00000010"),
                     )
                 )
 
@@ -180,7 +199,7 @@ class ProgressScreen:
                     ft.Column(controls=quiz_items, spacing=10),
                 ]
             ),
-            bgcolor=bg_card_alt(self.page), width=500, padding=15, border_radius=10,
+            bgcolor=bg_card_alt(self.page), padding=15, border_radius=10,
         )
 
         self.container.content = ft.Column(
@@ -191,7 +210,8 @@ class ProgressScreen:
                 ft.Container(height=20),
                 quiz_section,
                 ft.Container(height=20),
-                ach_section,
+                ach_button,
+                ft.Container(height=20),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10,
