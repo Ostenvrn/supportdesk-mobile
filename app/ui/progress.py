@@ -1,9 +1,10 @@
 # app/ui/progress.py
 #
-# Экран "Прогресс" — статистика по пройденным заявкам.
+# Экран "Прогресс" — статистика по пройденным заявкам + ачивки.
 
 import flet as ft
 from app.core.storage import load_progress
+from app.core.achievements import get_all_achievements
 
 
 class ProgressScreen:
@@ -13,11 +14,16 @@ class ProgressScreen:
         self.progress_data = {}
 
     async def build(self) -> ft.Control:
-        """Загружаем данные и строим интерфейс."""
         self.progress_data = await load_progress()
 
-        total_cases = len(self.progress_data)
+        # Исключаем служебный ключ с ачивками
+        cases_data = {k: v for k, v in self.progress_data.items() if not k.startswith("__")}
+        total_cases = len(cases_data)
         
+        # Получаем ачивки
+        earned_achievements = self.progress_data.get("__achievements__", [])
+        all_achievements = get_all_achievements()
+
         if total_cases == 0:
             self.container.content = ft.Column(
                 controls=[
@@ -33,17 +39,15 @@ class ProgressScreen:
         # Считаем статистику
         total_time = 0
         best_time = 999999
-        best_case = ""
         
         list_items = []
 
-        for case_id, data in self.progress_data.items():
+        for case_id, data in cases_data.items():
             time_spent = data.get("time", 0)
             total_time += time_spent
             
             if time_spent < best_time:
                 best_time = time_spent
-                best_case = data.get("number", case_id)
 
             mins = time_spent // 60
             secs = time_spent % 60
@@ -117,6 +121,50 @@ class ProgressScreen:
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
+        # Блок с ачивками
+        earned_ids = [a["id"] for a in earned_achievements]
+        ach_cards = []
+        
+        for ach in all_achievements:
+            is_earned = ach["id"] in earned_ids
+            ach_cards.append(
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Text(ach["icon"], size=30, color=None if is_earned else "#CCCCCC"),
+                            ft.Text(ach["title"], size=12, weight=ft.FontWeight.BOLD, 
+                                    color="#333333" if is_earned else "#999999",
+                                    text_align=ft.TextAlign.CENTER),
+                            ft.Text(ach["description"], size=10, color="#666666" if is_earned else "#CCCCCC",
+                                    text_align=ft.TextAlign.CENTER),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=4,
+                    ),
+                    bgcolor="#FFFFFF" if is_earned else "#F0F0F0",
+                    padding=10,
+                    border_radius=8,
+                    width=110,
+                    height=110,
+                    alignment=ft.Alignment.CENTER,
+                    opacity=1.0 if is_earned else 0.6,
+                )
+            )
+
+        ach_row = ft.Row(controls=ach_cards, wrap=True, spacing=10, alignment=ft.MainAxisAlignment.CENTER)
+
+        ach_section = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Text("🏆 Достижения", size=16, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Container(height=10),
+                    ach_row
+                ]
+            ),
+            bgcolor="#F4F6F9",
+            width=600,
+        )
+
         # Список заявок
         list_card = ft.Container(
             content=ft.Column(
@@ -135,6 +183,8 @@ class ProgressScreen:
                 ft.Text("Мой прогресс", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
                 ft.Container(height=10),
                 stats_card,
+                ft.Container(height=20),
+                ach_section,
                 ft.Container(height=20),
                 list_card,
             ],

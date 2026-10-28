@@ -3,7 +3,8 @@
 # Симулятор входящих заявок с консолью команд.
 #
 # Новое:
-# - Исправлено закрытие BottomSheet для Flet 1.0.5 (page.pop_dialog).
+# - Система достижений (ачивок).
+# - Подсчёт ошибок в продвинутом режиме.
 
 import json
 import random
@@ -12,6 +13,7 @@ from importlib import resources
 
 import flet as ft
 from app.core.storage import load_progress, save_progress
+from app.core.achievements import check_achievements, save_achievements  # Импорт ачивок
 
 
 class SimulatorScreen:
@@ -36,6 +38,9 @@ class SimulatorScreen:
         self.timer_running = False
 
         self.console_logs = []
+        
+        # Счётчик ошибок (для продвинутого режима)
+        self.errors_count = 0
 
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.console_list = None
@@ -85,6 +90,7 @@ class SimulatorScreen:
         self.timer_seconds = 0
         self.timer_running = False
         self.console_logs = []
+        self.errors_count = 0
 
         mode_text = "Продвинутый режим" if self.is_advanced else "Обычный режим"
 
@@ -159,6 +165,7 @@ class SimulatorScreen:
         self.timer_running = True
         self.current_command_idx = 0
         self.console_logs = []
+        self.errors_count = 0
         self._start_timer()
         self._show_console()
 
@@ -181,7 +188,6 @@ class SimulatorScreen:
             self.page.update()
 
     def _show_ticket_info(self, e):
-        """Открывает BottomSheet с информацией о текущей заявке."""
         case = self.current_case
         if not case:
             return
@@ -209,7 +215,6 @@ class SimulatorScreen:
                             "Понятно, закрыть",
                             bgcolor="#5A00FF",
                             color=ft.Colors.WHITE,
-                            # ИСПРАВЛЕНИЕ: используем pop_dialog() для Flet 1.0.5
                             on_click=lambda _: self.page.pop_dialog()
                         )
                     ],
@@ -219,7 +224,6 @@ class SimulatorScreen:
             ),
             open=True,
         )
-        # В Flet 1.0.5 используем show_dialog для отображения
         self.page.show_dialog(bs)
 
     def _show_console(self):
@@ -272,6 +276,8 @@ class SimulatorScreen:
                 else:
                     self._add_console_line(f"C:\\Users\\support> {user_cmd}", color="#FFFFFF")
                     self._add_console_line("Команда не распознана или неверна для этой ситуации.", color="#FF5555")
+                    # Увеличиваем счётчик ошибок
+                    self.errors_count += 1
                     cmd_input.value = ""
                     self.page.update()
 
@@ -442,6 +448,8 @@ class SimulatorScreen:
             self.interpret_container.controls = []
             self._show_console()
         else:
+            # В обычном режиме ошибка интерпретации тоже считается за ошибку (для ачивки)
+            self.errors_count += 1
             button.bgcolor = "#E63946"
             button.content.color = ft.Colors.WHITE
             self.page.update()
@@ -459,17 +467,47 @@ class SimulatorScreen:
         if not final_cmd:
             final_cmd = {"name": "close_ticket", "output": "Заявка закрыта."}
 
-        async def save_result():
+        async def save_result_and_check_achievements():
+            # 1. Загружаем прогресс
             progress = await load_progress()
+            
+            # 2. Сохраняем результат заявки
             progress[self.current_case["id"]] = {
                 "status": "passed",
                 "time": self.timer_seconds,
                 "number": self.current_case["number"],
                 "topic": self.current_case["topic"]
             }
+            
+            # 3. Проверяем ачивки
+            new_achievements = await check_achievements(
+                progress, 
+                self.current_case, 
+                self.timer_seconds,
+                self.errors_count
+            )
+            
+            # 4. Если есть новые — сохраняем и запоминаем для показа
+            if new_achievements:
+                progress = await save_achievements(progress, new_achievements)
+                self.new_achievements_to_show = new_achievements
+            else:
+                self.new_achievements_to_show = []
+            
             await save_progress(progress)
+            
+            # 5. Показываем уведомление (SnackBar) о новых ачивках
+            if self.new_achievements_to_show:
+                ach_names = ", ".join([f"{a['icon']} {a['title']}" for a in self.new_achievements_to_show])
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"🏆 Получены достижения: {ach_names}", color=ft.Colors.WHITE),
+                    bgcolor="#5A00FF",
+                    duration=5000,
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
 
-        self.page.run_task(save_result)
+        self.page.run_task(save_result_and_check_achievements)
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
