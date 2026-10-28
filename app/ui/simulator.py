@@ -1,10 +1,4 @@
 # app/ui/simulator.py
-#
-# Симулятор входящих заявок с консолью команд.
-#
-# Новое:
-# - Система достижений (ачивок).
-# - Подсчёт ошибок в продвинутом режиме.
 
 import json
 import random
@@ -13,7 +7,7 @@ from importlib import resources
 
 import flet as ft
 from app.core.storage import load_progress, save_progress
-from app.core.achievements import check_achievements, save_achievements  # Импорт ачивок
+from app.core.achievements import check_achievements, save_achievements
 
 
 class SimulatorScreen:
@@ -33,13 +27,9 @@ class SimulatorScreen:
 
         self.current_case = None
         self.current_command_idx = 0
-
         self.timer_seconds = 0
         self.timer_running = False
-
         self.console_logs = []
-        
-        # Счётчик ошибок (для продвинутого режима)
         self.errors_count = 0
 
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
@@ -53,7 +43,7 @@ class SimulatorScreen:
             with data_file.open("r", encoding="utf-8") as f:
                 cases.extend(json.load(f).get("cases", []))
         except Exception as e:
-            print(f"Ошибка загрузки основного файла кейсов: {e}")
+            print(f"Ошибка загрузки: {e}")
 
         try:
             extra_file = resources.files("assets").joinpath("cases_advanced_batch.json")
@@ -276,7 +266,6 @@ class SimulatorScreen:
                 else:
                     self._add_console_line(f"C:\\Users\\support> {user_cmd}", color="#FFFFFF")
                     self._add_console_line("Команда не распознана или неверна для этой ситуации.", color="#FF5555")
-                    # Увеличиваем счётчик ошибок
                     self.errors_count += 1
                     cmd_input.value = ""
                     self.page.update()
@@ -448,7 +437,6 @@ class SimulatorScreen:
             self.interpret_container.controls = []
             self._show_console()
         else:
-            # В обычном режиме ошибка интерпретации тоже считается за ошибку (для ачивки)
             self.errors_count += 1
             button.bgcolor = "#E63946"
             button.content.color = ft.Colors.WHITE
@@ -468,18 +456,17 @@ class SimulatorScreen:
             final_cmd = {"name": "close_ticket", "output": "Заявка закрыта."}
 
         async def save_result_and_check_achievements():
-            # 1. Загружаем прогресс
             progress = await load_progress()
             
-            # 2. Сохраняем результат заявки
+            # Сохраняем результат текущей заявки
             progress[self.current_case["id"]] = {
                 "status": "passed",
                 "time": self.timer_seconds,
                 "number": self.current_case["number"],
-                "topic": self.current_case["topic"]
+                "topic": self.current_case["topic"],
+                "no_errors": self.errors_count == 0  # Сохраняем флаг для ачивки "Схватываю на лету"
             }
             
-            # 3. Проверяем ачивки
             new_achievements = await check_achievements(
                 progress, 
                 self.current_case, 
@@ -487,7 +474,6 @@ class SimulatorScreen:
                 self.errors_count
             )
             
-            # 4. Если есть новые — сохраняем и запоминаем для показа
             if new_achievements:
                 progress = await save_achievements(progress, new_achievements)
                 self.new_achievements_to_show = new_achievements
@@ -496,7 +482,6 @@ class SimulatorScreen:
             
             await save_progress(progress)
             
-            # 5. Показываем уведомление (SnackBar) о новых ачивках
             if self.new_achievements_to_show:
                 ach_names = ", ".join([f"{a['icon']} {a['title']}" for a in self.new_achievements_to_show])
                 self.page.snack_bar = ft.SnackBar(
