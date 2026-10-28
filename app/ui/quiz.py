@@ -1,0 +1,202 @@
+# app/ui/quiz.py
+#
+# Экран тестирования (L1, L2, L3).
+
+import json
+import random
+import threading
+from importlib import resources
+
+import flet as ft
+from app.core.storage import save_quiz_result
+
+
+class QuizScreen:
+    def __init__(self, page: ft.Page, level: int, on_back):
+        self.page = page
+        self.level = level
+        self.on_back = on_back
+
+        self.questions = self._load_questions()
+        self.current_idx = 0
+        self.correct_answers = 0
+        self.selected_answers = [] # Для отладки
+
+        self.timer_seconds = 0
+        self.timer_running = True
+
+        self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
+        self.timer_text = None
+
+    def _load_questions(self) -> list:
+        """Загружает вопросы для текущего уровня."""
+        try:
+            data_file = resources.files("assets").joinpath("quiz_questions.json")
+            with data_file.open("r", encoding="utf-8") as f:
+                all_q = json.load(f).get("questions", [])
+            
+            # Фильтруем по уровню
+            filtered = [q for q in all_q if q["level"] == self.level]
+            # Перемешиваем
+            random.shuffle(filtered)
+            return filtered
+        except Exception as e:
+            print(f"Ошибка загрузки вопросов: {e}")
+            return []
+
+    def build(self) -> ft.Control:
+        if not self.questions:
+            self.container.content = ft.Text("Для этого уровня пока нет вопросов.")
+            return self.container
+
+        self._start_timer()
+        self._show_question()
+        return ft.Column(controls=[self.container], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+
+    def _start_timer(self):
+        def tick():
+            if self.timer_running:
+                self.timer_seconds += 1
+                if self.timer_text is not None:
+                    mins = self.timer_seconds // 60
+                    secs = self.timer_seconds % 60
+                    self.timer_text.value = f"⏱ {mins:02d}:{secs:02d}"
+                    self.page.update()
+                threading.Timer(1.0, tick).start()
+        threading.Timer(1.0, tick).start()
+
+    def _show_question(self):
+        if self.current_idx >= len(self.questions):
+            self._show_results()
+            return
+
+        q = self.questions[self.current_idx]
+
+        # Индикатор прогресса
+        progress_text = f"Вопрос {self.current_idx + 1} из {len(self.questions)}"
+        
+        self.timer_text = ft.Text(
+            f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}",
+            size=14, color="#5A00FF", weight=ft.FontWeight.BOLD,
+        )
+
+        # Кнопки ответов
+        answer_buttons = []
+        for idx, opt in enumerate(q["options"]):
+            btn = ft.Button(
+                content=ft.Text(opt, size=14, text_align=ft.TextAlign.LEFT),
+                bgcolor="#F8F9FA",
+                color="#333333",
+                width=500,
+                height=50,
+                on_click=lambda e, i=idx: self._on_answer(i),
+            )
+            answer_buttons.append(btn)
+
+        card = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Text(progress_text, size=13, color="#666666"),
+                            ft.Container(expand=True),
+                            self.timer_text,
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    ft.ProgressBar(value=self.current_idx / len(self.questions), bgcolor="#E9ECEF", color="#5A00FF"),
+                    ft.Container(height=20),
+                    ft.Text(f"Уровень L{self.level}", size=12, color="#5A00FF", weight=ft.FontWeight.BOLD),
+                    ft.Text(q["question"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Container(height=20),
+                    ft.Column(controls=answer_buttons, spacing=10),
+                ],
+                spacing=10,
+            ),
+            bgcolor="#FFFFFF",
+            border_radius=14,
+            padding=20,
+            width=600,
+            shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
+        )
+
+        self.container.content = card
+        self.page.update()
+
+    def _on_answer(self, answer_idx: int):
+        q = self.questions[self.current_idx]
+        if answer_idx == q["correct"]:
+            self.correct_answers += 1
+            self.page.snack_bar = ft.SnackBar(ft.Text("✅ Верно!", color="white"), bgcolor="#00A896", duration=1000)
+        else:
+            self.page.snack_bar = ft.SnackBar(ft.Text("❌ Неверно", color="white"), bgcolor="#E63946", duration=1000)
+        
+        self.page.snack_bar.open = True
+        self.page.update()
+
+        self.current_idx += 1
+        self._show_question()
+
+    def _show_results(self):
+        self.timer_running = False
+
+        async def save_result():
+            await save_quiz_result(self.level, self.correct_answers, len(self.questions), self.timer_seconds)
+
+        self.page.run_task(save_result)
+
+        mins = self.timer_seconds // 60
+        secs = self.timer_seconds % 60
+
+        # Оценка
+        score = int((self.correct_answers / len(self.questions)) * 100)
+        if score >= 90:
+            grade = "Отлично! 🏆"
+            color = "#00A896"
+        elif score >= 75:
+            grade = "Хорошо! 👍"
+            color = "#5A00FF"
+        elif score >= 50:
+            grade = "Удовлетворительно. 📖"
+            color = "#F4A261"
+        else:
+            grade = "Нужно повторить материал. 📚"
+            color = "#E63946"
+
+        card = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Icon(ft.Icons.EMOJI_EVENTS, size=60, color=color),
+                    ft.Text("Тест завершён!", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Container(height=10),
+                    ft.Text(f"Правильных ответов: {self.correct_answers} из {len(self.questions)}", size=18),
+                    ft.Text(f"Результат: {score}%", size=20, weight=ft.FontWeight.BOLD, color=color),
+                    ft.Text(grade, size=16, color=color),
+                    ft.Divider(),
+                    ft.Text(f"Затраченное время: {mins:02d}:{secs:02d}", size=14, color="#666666"),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            ),
+            bgcolor="#FFFFFF",
+            border_radius=14,
+            padding=30,
+            width=500,
+            shadow=ft.BoxShadow(blur_radius=10, color="#00000020"),
+        )
+
+        back_btn = ft.Button(
+            content=ft.Text("Вернуться на главную", color="#FFFFFF"),
+            bgcolor="#5A00FF",
+            width=300,
+            height=50,
+            on_click=lambda e: self.on_back(),
+        )
+
+        self.container.content = ft.Column(
+            controls=[card, ft.Container(height=20), back_btn],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            expand=True,
+        )
+        self.page.update()

@@ -1,6 +1,4 @@
 # app/core/storage.py
-#
-# Модуль хранения профиля, прогресса и темы.
 
 import json
 import flet as ft
@@ -62,11 +60,45 @@ async def save_theme(is_dark: bool):
 
 
 async def reset_all_data():
-    """Сбрасывает профиль, прогресс и тему."""
     try:
         prefs = ft.SharedPreferences()
         await prefs.set("profile_name", "")
         await prefs.set("progress_data", "{}")
         await prefs.set("dark_theme", False)
+        await prefs.set("quiz_results", "[]") # Очищаем и тесты
     except Exception as e:
         print(f"Ошибка сброса данных: {e}")
+
+
+# --- Новые функции для тестов ---
+
+async def load_quiz_results() -> list:
+    """Загружает историю результатов тестов."""
+    try:
+        prefs = ft.SharedPreferences()
+        raw = await prefs.get("quiz_results")
+        if raw:
+            return json.loads(raw)
+        return []
+    except Exception as e:
+        print(f"Ошибка загрузки результатов тестов: {e}")
+        return []
+
+
+async def save_quiz_result(level: int, correct: int, total: int, time_spent: int):
+    """Сохраняет результат нового теста."""
+    try:
+        history = await load_quiz_results()
+        from datetime import datetime
+        new_result = {
+            "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
+            "level": level,
+            "correct": correct,
+            "total": total,
+            "time": time_spent
+        }
+        history.append(new_result)
+        prefs = ft.SharedPreferences()
+        await prefs.set("quiz_results", json.dumps(history))
+    except Exception as e:
+        print(f"Ошибка сохранения результата теста: {e}")

@@ -1,10 +1,8 @@
 # app/ui/profile.py
-#
-# Экран "Профиль" — настройки пользователя и сброс прогресса.
 
 import flet as ft
 import app.state as state
-from app.core.storage import save_profile, reset_all_data
+from app.core.storage import save_profile, reset_all_data, load_quiz_results
 
 
 class ProfileScreen:
@@ -46,6 +44,34 @@ class ProfileScreen:
             on_click=save_name,
         )
 
+        # --- История тестов (Асинхронный блок) ---
+        quiz_history_container = ft.Column()
+
+        async def load_history():
+            history = await load_quiz_results()
+            if not history:
+                quiz_history_container.controls = [ft.Text("Вы ещё не проходили тесты.", color="#666666", italic=True)]
+            else:
+                for res in reversed(history[-5:]): # Последние 5
+                    quiz_history_container.controls.append(
+                        ft.Container(
+                            content=ft.Row(
+                                controls=[
+                                    ft.Text(f"L{res['level']}", size=14, weight=ft.FontWeight.BOLD, color="#5A00FF"),
+                                    ft.Text(f"{res['date']}", size=12, color="#666666"),
+                                    ft.Container(expand=True),
+                                    ft.Text(f"{res['correct']}/{res['total']}", size=14, weight=ft.FontWeight.BOLD),
+                                ]
+                            ),
+                            padding=10,
+                            bgcolor="#F8F9FA",
+                            border_radius=8,
+                        )
+                    )
+            self.page.update()
+
+        self.page.run_task(load_history)
+
         # --- Сброс прогресса ---
         def confirm_reset(e):
             def do_reset(e):
@@ -55,9 +81,7 @@ class ProfileScreen:
                     state.profile_created = False
                     state.progress = {}
                     self.page.pop_dialog()
-                    # Перенаправляем на экран профиля (через перезагрузку главного экрана)
-                    # Проще всего выкинуть пользователя на экран ввода имени
-                    self.page.go("/") # Или вызвать callback, но для простоты сделаем так
+                    self.page.go("/")
                     self.page.snack_bar = ft.SnackBar(ft.Text("Прогресс сброшен. Перезапустите приложение."))
                     self.page.snack_bar.open = True
                     self.page.update()
@@ -65,7 +89,7 @@ class ProfileScreen:
 
             dialog = ft.AlertDialog(
                 title=ft.Text("Сброс прогресса"),
-                content=ft.Text("Вы уверены? Все достижения, история и имя будут удалены безвозвратно."),
+                content=ft.Text("Вы уверены? Все достижения, история, результаты тестов и имя будут удалены."),
                 actions=[
                     ft.TextButton("Отмена", on_click=lambda _: self.page.pop_dialog()),
                     ft.Button("Да, удалить", bgcolor="#E63946", color="#FFFFFF", on_click=do_reset),
@@ -114,11 +138,15 @@ class ProfileScreen:
                 success_text,
                 ft.Divider(),
                 theme_switch,
+                ft.Divider(),
+                ft.Text("Последние тесты:", size=16, weight=ft.FontWeight.BOLD),
+                quiz_history_container,
                 ft.Container(height=20),
                 reset_btn,
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10,
             expand=True,
+            scroll=ft.ScrollMode.AUTO,
         )
         return self.container
