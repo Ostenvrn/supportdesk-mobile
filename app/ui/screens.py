@@ -1,7 +1,7 @@
 # app/ui/screens.py
 #
 # Экраны приложения.
-# Справочник (с поиском) + Экран выбора тренажёра.
+# Справочник (с поиском и исправленным скроллом) + Экран выбора тренажёра.
 
 import flet as ft
 
@@ -13,13 +13,13 @@ class KnowledgeScreen:
         self.page = page
         self.current_category = None
         self.container = ft.Container(expand=True)
-        self.search_results_container = ft.Column(visible=False)
-        self.categories_container = ft.Column()
+        # Контейнеры для переключения
+        self.search_results_container = ft.Column(visible=False, expand=True)
+        self.categories_container = ft.Column(expand=True)
 
     def build(self) -> ft.Control:
         self.show_categories()
 
-        # Поле поиска
         search_input = ft.TextField(
             hint_text="Поиск по справочнику...",
             prefix_icon=ft.Icons.SEARCH,
@@ -29,6 +29,7 @@ class KnowledgeScreen:
             on_change=self._on_search_change,
         )
 
+        # Возвращаем колонку, которая займет всё пространство
         return ft.Column(
             controls=[
                 ft.Row(
@@ -41,25 +42,23 @@ class KnowledgeScreen:
                 ft.Container(height=10),
                 search_input,
                 ft.Container(height=15),
-                self.search_results_container, # Контейнер для результатов поиска
-                self.categories_container,      # Контейнер для обычного списка
+                # Оба контейнера должны занимать оставшееся место
+                self.search_results_container, 
+                self.categories_container,      
             ],
-            expand=True,
+            expand=True, # Важно: колонка растягивается
         )
 
     def _on_search_change(self, e):
         query = e.control.value.strip()
         if not query:
-            # Если пусто — показываем категории
             self.search_results_container.visible = False
             self.categories_container.visible = True
             self.page.update()
             return
 
-        # Выполняем поиск
         results = search_knowledge(query)
         
-        # Скрываем категории, показываем результаты
         self.categories_container.visible = False
         self.search_results_container.visible = True
         self.search_results_container.controls.clear()
@@ -118,7 +117,7 @@ class KnowledgeScreen:
     def show_categories(self):
         categories = get_categories()
         if not categories:
-            self.categories_container.controls.append(ft.Text("База знаний пуста.", color="#666666", italic=True))
+            self.categories_container.controls = [ft.Text("База знаний пуста.", color="#666666", italic=True)]
             self.page.update()
             return
 
@@ -128,6 +127,7 @@ class KnowledgeScreen:
         for cat in categories:
             cards.append(self._make_category_card(cat))
 
+        # Обертываем список в Column со scroll=AUTO и expand=True
         self.categories_container.controls = [
             ft.Text("Выберите раздел:", size=14, color="#666666"),
             ft.Container(height=8),
@@ -163,7 +163,6 @@ class KnowledgeScreen:
         )
 
     def show_articles(self, category_id: str):
-        # Скрываем поиск при переходе к статьям
         self.search_results_container.visible = False
         self.categories_container.visible = True
 
@@ -193,6 +192,7 @@ class KnowledgeScreen:
             on_click=lambda e: self.show_categories(),
         )
 
+        # Обертываем список статей в Column со scroll=AUTO и expand=True
         self.categories_container.controls = [
             back_btn,
             ft.Text(category["name"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
@@ -244,15 +244,21 @@ class KnowledgeScreen:
             on_click=lambda e: self.show_articles(category_id),
         )
 
+        # Оборачиваем текст статьи в Column со scroll=AUTO
         self.categories_container.controls = [
             back_btn,
             ft.Text(article["title"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
             ft.Container(height=10),
-            ft.Container(
-                content=ft.Text(article["content"], size=14, color="#333333", selectable=True),
-                padding=ft.Padding.all(15),
-                bgcolor="#FFFFFF",
-                border_radius=10,
+            ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Text(article["content"], size=14, color="#333333", selectable=True),
+                        padding=ft.Padding.all(15),
+                        bgcolor="#FFFFFF",
+                        border_radius=10,
+                    )
+                ],
+                scroll=ft.ScrollMode.AUTO,
                 expand=True,
             ),
         ]
@@ -263,7 +269,7 @@ class SimulatorSelectionScreen:
     """Экран выбора уровня (L1, L2, L3) и режима (Обычный/Продвинутый)."""
     def __init__(self, page: ft.Page, on_start_simulator):
         self.page = page
-        self.on_start_simulator = on_start_simulator # callback (level, is_advanced)
+        self.on_start_simulator = on_start_simulator
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
