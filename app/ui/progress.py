@@ -78,6 +78,7 @@ class ProgressScreen:
             best_mins = best_time // 60
             best_secs = best_time % 60
 
+            # --- ИСПРАВЛЕНИЕ: Оборачиваем stats_card в Row для центрирования ---
             stats_card = ft.Container(
                 content=ft.Row(
                     controls=[
@@ -97,7 +98,13 @@ class ProgressScreen:
                 bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
             )
 
-            cases_section = ft.Column(controls=[stats_card, ft.Container(height=20), list_card])
+            # Оборачиваем всё в Row по центру
+            cases_section = ft.Row(
+                controls=[
+                    ft.Column(controls=[stats_card, ft.Container(height=20), list_card], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
 
         # --- Блок ачивок ---
         earned_ids = [a["id"] for a in earned_achievements]
@@ -120,15 +127,20 @@ class ProgressScreen:
                 )
             )
 
-        ach_section = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text("🏆 Достижения", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
-                    ft.Container(height=10),
-                    ft.Row(controls=ach_cards, wrap=True, spacing=10, alignment=ft.MainAxisAlignment.CENTER)
-                ]
-            ),
-            bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
+        ach_section = ft.Row(
+            controls=[
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Text("🏆 Достижения", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                            ft.Container(height=10),
+                            ft.Row(controls=ach_cards, wrap=True, spacing=10, alignment=ft.MainAxisAlignment.CENTER)
+                        ]
+                    ),
+                    bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
         )
 
         # --- Блок тестов ---
@@ -159,15 +171,20 @@ class ProgressScreen:
                     )
                 )
 
-        quiz_section = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text("📝 Результаты тестов", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
-                    ft.Container(height=10),
-                    ft.Column(controls=quiz_items, spacing=10),
-                ]
-            ),
-            bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
+        quiz_section = ft.Row(
+            controls=[
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Text("📝 Результаты тестов", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                            ft.Container(height=10),
+                            ft.Column(controls=quiz_items, spacing=10),
+                        ]
+                    ),
+                    bgcolor=bg_card_alt(self.page), width=600, padding=15, border_radius=10,
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
         )
 
         self.container.content = ft.Column(
