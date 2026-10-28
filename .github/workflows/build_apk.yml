@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Позволяет запускать сборку вручную кнопкой
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,21 +12,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. Устанавливаем uv (менеджер пакетов, который использует экшен)
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      # 2. Устанавливаем flet-cli в окружение runner'а
+      - name: Install flet-cli
+        run: uv pip install flet-cli --system
+
+      # 3. Теперь запускаем официальный экшен
       - name: Build APK with Flet
+        id: build
         uses: flet-dev/flet-build-action@v1
         with:
           target: apk
-          # Точка входа — наш app.py
-          # В action это передается через pyproject.toml, но можно указать явно
-          # (по умолчанию action ищет main.py, поэтому это важно)
-          # Примечание: flet-build-action берет настройки из pyproject.toml,
-          # поэтому убедись, что там указан правильный модуль, если нужно.
-          # В нашем случае, так как точка входа app.py, 
-          # лучше указать это в pyproject.toml через module_name, если action не найдет.
-          
+          runner-python-version: "3.12"
+          bundled-python-version: "3.12"
+          build-number: ${{ github.run_number }}
+
+      # 4. Загружаем артефакт
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: supportdesk-apk
-          path: build/apk/*.apk
+          path: ${{ steps.build.outputs.archive-path }}
+          archive: false
           if-no-files-found: error
