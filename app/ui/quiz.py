@@ -1,8 +1,7 @@
 # app/ui/quiz.py
 #
 # Экран тестирования (L1, L2, L3).
-# Тест состоит из 20 случайных вопросов.
-# В конце — разбор ошибок.
+# С разбором ошибок и объяснением правильных ответов.
 
 import json
 import random
@@ -22,10 +21,7 @@ class QuizScreen:
         self.questions = self._load_questions()
         self.current_idx = 0
         self.correct_answers = 0
-        
-        # Список для хранения истории ответов (для разбора в конце)
-        # Формат: {"question": str, "user_answer": str, "correct_answer": str, "is_correct": bool}
-        self.answers_history = [] 
+        self.answers_history = [] # Список для хранения {"question": q, "user_idx": int, "is_correct": bool}
 
         self.timer_seconds = 0
         self.timer_running = True
@@ -127,11 +123,10 @@ class QuizScreen:
         q = self.questions[self.current_idx]
         is_correct = (answer_idx == q["correct"])
         
-        # Записываем в историю
+        # Сохраняем в историю
         self.answers_history.append({
-            "question": q["question"],
-            "user_answer": q["options"][answer_idx],
-            "correct_answer": q["options"][q["correct"]],
+            "question_data": q,
+            "user_idx": answer_idx,
             "is_correct": is_correct
         })
 
@@ -157,7 +152,6 @@ class QuizScreen:
 
         mins = self.timer_seconds // 60
         secs = self.timer_seconds % 60
-
         passed = self.correct_answers >= 15
         
         if passed:
@@ -173,16 +167,23 @@ class QuizScreen:
 
         # --- Собираем блок разбора ошибок ---
         review_controls = []
-        for idx, item in enumerate(self.answers_history):
-            if not item["is_correct"]:
-                # Красная карточка для ошибки
+        
+        for idx, history in enumerate(self.answers_history):
+            if not history["is_correct"]:
+                q = history["question_data"]
+                user_ans_text = q["options"][history["user_idx"]]
+                correct_ans_text = q["options"][q["correct"]]
+                explanation = q.get("explanation", "")
+
                 review_controls.append(
                     ft.Container(
                         content=ft.Column(
                             controls=[
-                                ft.Text(f"Вопрос {idx + 1}: {item['question']}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
-                                ft.Text(f"❌ Ваш ответ: {item['user_answer']}", size=13, color="#E63946"),
-                                ft.Text(f"✅ Правильный ответ: {item['correct_answer']}", size=13, color="#00A896", weight=ft.FontWeight.BOLD),
+                                ft.Text(f"Вопрос {idx + 1}: {q['question']}", size=14, weight=ft.FontWeight.BOLD, color="#333333"),
+                                ft.Text(f"❌ Ваш ответ: {user_ans_text}", size=13, color="#E63946"),
+                                ft.Text(f"✅ Правильный ответ: {correct_ans_text}", size=13, color="#00A896", weight=ft.FontWeight.BOLD),
+                                ft.Container(height=5),
+                                ft.Text(f"💡 {explanation}", size=12, color="#0056B3", italic=True),
                             ],
                             spacing=5,
                         ),
@@ -194,7 +195,6 @@ class QuizScreen:
                     )
                 )
 
-        # Если ошибок нет
         if not review_controls:
             review_controls.append(
                 ft.Text("🎉 Вы ответили правильно на все вопросы!", size=14, color="#00A896", weight=ft.FontWeight.BOLD)
@@ -212,7 +212,6 @@ class QuizScreen:
             width=600,
         )
 
-        # --- Основная карточка результата ---
         card = ft.Container(
             content=ft.Column(
                 controls=[
@@ -244,7 +243,6 @@ class QuizScreen:
             on_click=lambda e: self.on_back(),
         )
 
-        # Собираем финальный экран
         self.container.content = ft.Column(
             controls=[
                 card,
@@ -254,7 +252,7 @@ class QuizScreen:
                 back_btn
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            alignment=ft.MainAxisAlignment.START, # Начинаем сверху, чтобы можно было листать
+            alignment=ft.MainAxisAlignment.START,
             expand=True,
             scroll=ft.ScrollMode.AUTO,
         )
