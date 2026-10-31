@@ -19,7 +19,8 @@ class ProfileScreen:
             border_color=text_accent(self.page),
             focused_border_color=text_accent(self.page),
             color=text_primary(self.page),
-            label_style=ft.TextStyle(color=text_secondary(self.page))
+            label_style=ft.TextStyle(color=text_secondary(self.page)),
+            border_radius=12,
         )
 
         success_text = ft.Text("", color="#00A896", size=14, weight=ft.FontWeight.BOLD, visible=False)
@@ -45,6 +46,51 @@ class ProfileScreen:
             width=300,
             height=45,
             on_click=save_name,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
+        )
+
+        # --- Блок достижений ---
+        async def load_achievements_count():
+            from app.core.storage import load_progress
+            from app.core.achievements import get_all_achievements
+            progress = await load_progress()
+            earned = progress.get("__achievements__", [])
+            all_ach = get_all_achievements()
+            ach_text.value = f"🏆 Получено достижений: {len(earned)} из {len(all_ach)}"
+            self.page.update()
+
+        ach_text = ft.Text("🏆 Загрузка достижений...", size=14, weight=ft.FontWeight.BOLD, color=text_accent(self.page))
+        self.page.run_task(load_achievements_count)
+
+        # --- Смена профиля ---
+        def confirm_change_profile(e):
+            def do_change_profile(e):
+                async def _change():
+                    # Сбрасываем только имя в state и хранилище, прогресс остается!
+                    state.profile_name = ""
+                    state.profile_created = False
+                    await save_profile("") 
+                    self.page.pop_dialog()
+                    # Перенаправляем на стартовый экран (вызываем перезапуск main)
+                    self.page.window.reload()
+                self.page.run_task(_change)
+
+            dialog = ft.AlertDialog(
+                title=ft.Text("Смена профиля"),
+                content=ft.Text("Вы уверены? Текущее имя будет сброшено, но весь ваш прогресс и достижения сохранятся."),
+                actions=[
+                    ft.TextButton("Отмена", on_click=lambda _: self.page.pop_dialog()),
+                    ft.Button("Сменить имя", bgcolor="#5A00FF", color="#FFFFFF", on_click=do_change_profile),
+                ],
+            )
+            self.page.show_dialog(dialog)
+
+        change_profile_btn = ft.OutlinedButton(
+            content=ft.Text("Сменить профиль", color=text_accent(self.page)),
+            width=300,
+            height=45,
+            on_click=confirm_change_profile,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
         )
 
         # --- История тестов ---
@@ -84,10 +130,7 @@ class ProfileScreen:
                     state.profile_created = False
                     state.progress = {}
                     self.page.pop_dialog()
-                    self.page.go("/")
-                    self.page.snack_bar = ft.SnackBar(ft.Text("Прогресс сброшен. Перезапустите приложение."))
-                    self.page.snack_bar.open = True
-                    self.page.update()
+                    self.page.window.reload()
                 self.page.run_task(_reset)
 
             dialog = ft.AlertDialog(
@@ -95,7 +138,7 @@ class ProfileScreen:
                 content=ft.Text("Вы уверены? Все достижения, история, результаты тестов и имя будут удалены."),
                 actions=[
                     ft.TextButton("Отмена", on_click=lambda _: self.page.pop_dialog()),
-                    ft.Button("Да, удалить", bgcolor="#E63946", color="#FFFFFF", on_click=do_reset),
+                    ft.Button(content=ft.Text("Да, удалить"), bgcolor="#E63946", color="#FFFFFF", on_click=do_reset),
                 ],
             )
             self.page.show_dialog(dialog)
@@ -106,6 +149,7 @@ class ProfileScreen:
             width=300,
             height=45,
             on_click=confirm_reset,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
         )
 
         # --- Тёмная тема ---
@@ -137,8 +181,11 @@ class ProfileScreen:
                 name_input,
                 ft.Container(height=10),
                 save_btn,
-                ft.Container(height=10),
+                ft.Container(height=5),
                 success_text,
+                change_profile_btn,
+                ft.Container(height=15),
+                ach_text,
                 ft.Divider(),
                 theme_switch,
                 ft.Divider(),
@@ -146,6 +193,7 @@ class ProfileScreen:
                 quiz_history_container,
                 ft.Container(height=20),
                 reset_btn,
+                ft.Container(height=20),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10,
