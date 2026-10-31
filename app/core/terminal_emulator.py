@@ -5,7 +5,6 @@
 
 import random
 import re
-from datetime import datetime
 
 
 def execute_command(command: str) -> str:
@@ -54,7 +53,7 @@ def execute_command(command: str) -> str:
     if cmd == "arp -a":
         return _emulate_arp()
     
-    # --- TELNET (эмуляция проверки порта) ---
+    # --- TELNET ---
     if cmd.startswith("telnet "):
         parts = command.split(" ")
         if len(parts) >= 3:
@@ -67,7 +66,27 @@ def execute_command(command: str) -> str:
     if cmd == "systeminfo":
         return _emulate_systeminfo()
     
-    # --- СПЕЦИАЛЬНЫЕ ---
+    # --- ROUTE PRINT ---
+    if cmd == "route print":
+        return _emulate_route_print()
+    
+    # --- TASKLIST ---
+    if cmd == "tasklist":
+        return _emulate_tasklist()
+    
+    # --- NET USER ---
+    if cmd == "net user":
+        return _emulate_net_user()
+    
+    # --- WHOAMI ---
+    if cmd == "whoami":
+        return "support-pc\\support"
+    
+    # --- HOSTNAME ---
+    if cmd == "hostname":
+        return "Support-PC"
+    
+    # --- HELP ---
     if cmd == "help":
         return (
             "Доступные команды:\n"
@@ -80,9 +99,15 @@ def execute_command(command: str) -> str:
             "  ipconfig /renew   - Обновление IP\n"
             "  nslookup <домен>  - Проверка DNS\n"
             "  netstat -an       - Активные подключения\n"
+            "  netstat -rn       - Таблица маршрутизации\n"
             "  arp -a            - Таблица ARP\n"
+            "  route print       - Маршруты\n"
             "  telnet <IP> <порт> - Проверка порта\n"
             "  systeminfo        - Информация о системе\n"
+            "  tasklist          - Запущенные процессы\n"
+            "  net user          - Пользователи\n"
+            "  whoami            - Текущий пользователь\n"
+            "  hostname          - Имя компьютера\n"
             "  cls               - Очистить экран\n"
         )
     
@@ -90,10 +115,7 @@ def execute_command(command: str) -> str:
     return f"'{command.split(' ')[0]}' не является внутренней или внешней командой."
 
 
-# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Генераторы вывода) ---
-
 def _get_fake_ip(host: str) -> str:
-    """Генерирует псевдо-IP для неизвестного хоста."""
     if "ya.ru" in host or "yandex" in host:
         return "87.250.250.242"
     if "google" in host:
@@ -106,21 +128,17 @@ def _get_fake_ip(host: str) -> str:
         return "1.1.1.1"
     if "192.168" in host:
         return host
-    # Если это уже похоже на IP
     if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", host):
         return host
-    # Иначе генерируем
     return f"{random.randint(80, 220)}.{random.randint(1, 254)}.{random.randint(1, 254)}.{random.randint(1, 254)}"
 
 
 def _emulate_ping(target: str) -> str:
     ip = _get_fake_ip(target)
     times = [random.randint(10, 50) for _ in range(4)]
-    
     result = f"Обмен пакетами с {target} [{ip}] с 32 байтами данных:\n"
     for t in times:
         result += f"Ответ от {ip}: число байт=32 время={t}мс TTL=117\n"
-    
     result += f"\nСтатистика Ping для {ip}:\n"
     result += "    Пакетов: отправлено = 4, получено = 4, потеряно = 0\n"
     result += "    (0% потерь)\n"
@@ -130,15 +148,12 @@ def _emulate_ping(target: str) -> str:
 def _emulate_tracert(target: str) -> str:
     ip = _get_fake_ip(target)
     result = f"Трассировка маршрута к {target} [{ip}]\nс максимальным числом прыжков 30:\n\n"
-    
-    # Генерируем 5 хопов
     for i in range(1, 6):
         hop_ip = f"10.0.{random.randint(1, 5)}.{random.randint(1, 254)}" if i < 5 else ip
         t1 = random.randint(1, 10)
         t2 = random.randint(1, 10)
         t3 = random.randint(1, 10)
         result += f"  {i:2d}    {t1:3d} ms    {t2:3d} ms    {t3:3d} ms  {hop_ip}\n"
-    
     result += "\nТрассировка завершена."
     return result
 
@@ -185,16 +200,15 @@ def _emulate_ipconfig_all() -> str:
 def _emulate_nslookup(target: str) -> str:
     if "fail" in target or "invalid" in target:
         return (
-            "╤хЁтхЁ:  UnKnown\n"
+            "Сервер:  UnKnown\n"
             "Address:  192.168.1.1\n\n"
             "*** UnKnown не удалось найти " + target + ": Non-existent domain"
         )
-    
     ip = _get_fake_ip(target)
     return (
-        "╤хЁтхЁ:  UnKnown\n"
+        "Сервер:  UnKnown\n"
         "Address:  192.168.1.1\n\n"
-        "╚ь :     " + target + "\n"
+        "Имя:     " + target + "\n"
         "Address:  " + ip + "\n"
     )
 
@@ -257,4 +271,54 @@ def _emulate_systeminfo() -> str:
         "                            [01]: Intel64 Family 6 Model 158 Stepping 10 GenuineIntel ~2592 МГц\n"
         "Полный объем физической памяти: 16 384 МБ\n"
         "Доступная физическая память: 8 192 МБ\n"
+    )
+
+
+def _emulate_route_print() -> str:
+    return (
+        "===========================================================================\n"
+        "Список интерфейсов\n"
+        " 11...00 1a 2b 3c 4d 5e ......Realtek PCIe GbE Family Controller\n"
+        "  1...........................Software Loopback Interface 1\n"
+        "===========================================================================\n\n"
+        "IPv4 таблица маршрута\n"
+        "===========================================================================\n"
+        "Активные маршруты:\n"
+        "Сетевой адрес           Маска сети      Адрес шлюза       Интерфейс  Метрика\n"
+        "          0.0.0.0          0.0.0.0      192.168.1.1     192.168.1.45     25\n"
+        "        127.0.0.0        255.0.0.0         On-link         127.0.0.1    331\n"
+        "      192.168.1.0    255.255.255.0         On-link      192.168.1.45    281\n"
+        "  192.168.1.45  255.255.255.255         On-link      192.168.1.45    281\n"
+        "    224.0.0.0        240.0.0.0         On-link         127.0.0.1    331\n"
+        "    224.0.0.0        240.0.0.0         On-link      192.168.1.45    281\n"
+        "===========================================================================\n"
+        "Постоянные маршруты:\n"
+        "  Нет.\n"
+    )
+
+
+def _emulate_tasklist() -> str:
+    return (
+        "Имя образа                     PID Имя сессии       № сеанса       Память\n"
+        "========================= ======== ================ =========== ============\n"
+        "System Idle Process              0 Services                   0          8 КБ\n"
+        "System                           4 Services                   0        144 КБ\n"
+        "smss.exe                       340 Services                   0      1 100 КБ\n"
+        "csrss.exe                      496 Services                   0      4 200 КБ\n"
+        "wininit.exe                    580 Services                   0      5 100 КБ\n"
+        "services.exe                   636 Services                   0      6 500 КБ\n"
+        "lsass.exe                      652 Services                   0     12 400 КБ\n"
+        "svchost.exe                    824 Services                   0     18 200 КБ\n"
+        "explorer.exe                  4020 Console                    1     45 300 КБ\n"
+        "chrome.exe                    5104 Console                    1    120 500 КБ\n"
+    )
+
+
+def _emulate_net_user() -> str:
+    return (
+        "Учетные записи пользователей для \\\\SUPPORT-PC\n\n"
+        "-------------------------------------------------------------------------------\n"
+        "Administrator            DefaultAccount           Guest\n"
+        "support                  WDAGUtilityAccount\n"
+        "Команда выполнена успешно.\n"
     )
