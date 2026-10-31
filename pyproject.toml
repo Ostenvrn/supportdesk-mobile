@@ -1,10 +1,11 @@
 [project]
 name = "supportdesk-mobile"
-version = "1.0.0"
+version = "1.2.0"
 description = "Mobile trainer for telecom support engineers"
 requires-python = ">=3.12"
 
 [tool.flet]
 product = "SupportDesk Mobile"
 org = "com.ostenvrn"
-build_number = 1
+build_number = 3
+icon = "icon.png"

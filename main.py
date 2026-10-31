@@ -1,4 +1,4 @@
-# app.py
+# main.py
 #
 # Точка входа SupportDesk Mobile (Flet 1.0.5).
 
@@ -13,6 +13,7 @@ from app.ui.progress import ProgressScreen
 from app.ui.profile import ProfileScreen
 from app.ui.about import AboutScreen
 from app.ui.quiz import QuizScreen
+from app.ui.terminal import TerminalScreen  # Импортируем экран терминала
 from app.ui.theme_colors import (
     text_primary, text_secondary, text_accent, text_error, bg_primary, bg_card, bg_card_alt
 )
@@ -84,13 +85,13 @@ async def main(page: ft.Page):
         page.update()
 
     def show_profile_screen():
+        # ИСПРАВЛЕНИЕ: Убрали border_color и focused_border_color
         name_input = ft.TextField(
             label="Ваше имя", 
             hint_text="Например, Александр", 
             width=300, 
             autofocus=True, 
-            border_color=text_accent(page), 
-            focused_border_color=text_accent(page),
+            border=ft.InputBorder.OUTLINE,
             color=text_primary(page),
             label_style=ft.TextStyle(color=text_secondary(page))
         )
@@ -136,7 +137,14 @@ async def main(page: ft.Page):
                         body = sim.build()
                         back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тренажёры"))
                         set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
-                    body = SimulatorSelectionScreen(page, on_start_simulator=start_sim).build()
+                    
+                    def start_terminal():
+                        term = TerminalScreen(page, on_back=lambda: open_section("Тренажёры"))
+                        body = term.build()
+                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тренажёры"))
+                        set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+
+                    body = SimulatorSelectionScreen(page, on_start_simulator=start_sim, on_start_terminal=start_terminal).build()
                     back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
                     set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
 
@@ -188,7 +196,6 @@ async def main(page: ft.Page):
                     spacing=15,
                 ),
                 bgcolor=bg_card(page), border_radius=14, padding=ft.Padding.symmetric(vertical=15, horizontal=20),
-                # Делаем карточку адаптивной: на мобилке 1 в ряд, на ПК 2 в ряд
                 col={"xs": 12, "sm": 6},
                 on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
             )

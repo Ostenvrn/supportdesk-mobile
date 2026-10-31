@@ -2,7 +2,7 @@
 #
 # Экраны приложения:
 # - KnowledgeScreen (Справочник с поиском и отметкой о прочтении)
-# - SimulatorSelectionScreen (Выбор уровня L1/L2/L3 для тренажёра)
+# - SimulatorSelectionScreen (Выбор уровня L1/L2/L3 для тренажёра + Терминал)
 # - QuizSelectionScreen (Выбор уровня для теста)
 
 import flet as ft
@@ -222,7 +222,6 @@ class KnowledgeScreen:
         self.search_results_container.visible = False
         self.categories_container.visible = True
 
-        # Отмечаем статью как прочитанную (для ачивки "Книжный червь")
         self.page.run_task(mark_article_read, category_id, article_idx)
 
         category = get_category_by_id(category_id)
@@ -266,10 +265,12 @@ class KnowledgeScreen:
 
 
 class SimulatorSelectionScreen:
-    """Экран выбора уровня (L1, L2, L3) и режима (Обычный/Продвинутый)."""
-    def __init__(self, page: ft.Page, on_start_simulator):
+    """Экран выбора уровня (L1, L2, L3) и режима (Обычный/Продвинутый + Терминал)."""
+    
+    def __init__(self, page: ft.Page, on_start_simulator, on_start_terminal=None):
         self.page = page
         self.on_start_simulator = on_start_simulator
+        self.on_start_terminal = on_start_terminal  # Функция запуска терминала
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
@@ -322,6 +323,24 @@ class SimulatorSelectionScreen:
             on_click=lambda e: self._show_mode_selection(start_level, is_advanced=True),
         )
 
+        # --- Блок кнопки Терминала ---
+        terminal_btn = ft.Container()
+        if self.on_start_terminal is not None:
+            terminal_btn = ft.Button(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.TERMINAL, color="#FFFFFF", size=20),
+                        ft.Text("Свободный терминал (Песочница)", color="#FFFFFF", weight=ft.FontWeight.BOLD, size=14),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=8,
+                ),
+                bgcolor="#00A896",
+                width=300,
+                height=45,
+                on_click=lambda e: self.on_start_terminal(),
+            )
+
         self.container.content = ft.Column(
             controls=[
                 ft.Text("Выберите уровень поддержки", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
@@ -331,6 +350,8 @@ class SimulatorSelectionScreen:
                 mode_label,
                 ft.Container(height=10),
                 ft.Row(controls=[normal_btn, advanced_btn], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
+                ft.Container(height=20),
+                terminal_btn,
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
