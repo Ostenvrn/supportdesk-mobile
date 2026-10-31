@@ -7,7 +7,7 @@ from importlib import resources
 
 import flet as ft
 from app.core.storage import load_progress, save_progress
-from app.core.achievements import check_achievements, save_achievements
+from app.core.achievements import check_achievements, save_achievements, get_all_achievements
 from app.ui.theme_colors import (
     text_primary, text_secondary, text_accent, text_error, 
     bg_card, bg_card_alt, border_color
@@ -39,6 +39,7 @@ class SimulatorScreen:
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.console_list = None
         self.timer_text = None
+        self.interpret_container = None
 
     def _load_all_cases(self) -> list:
         cases = []
@@ -69,7 +70,7 @@ class SimulatorScreen:
                 controls=[
                     ft.Icon(ft.Icons.INFO, size=50, color="orange"),
                     ft.Text(f"Нет заявок для уровня L{self.level} в этом режиме.", size=18, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
-                    ft.Button("Назад", on_click=lambda e: self.on_back())
+                    ft.Button(content=ft.Text("Назад"), on_click=lambda e: self.on_back())
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER
@@ -242,8 +243,8 @@ class SimulatorScreen:
                         ft.Container(height=20),
                         ft.Row(
                             controls=[
-                                ft.Button("Посмотреть CRM", icon=ft.Icons.STOREFRONT, bgcolor="#00A896", color=ft.Colors.WHITE, on_click=open_crm),
-                                ft.Button("Закрыть", bgcolor="#555555", color=ft.Colors.WHITE, on_click=lambda _: self.page.pop_dialog())
+                                ft.Button(content=ft.Text("Посмотреть CRM"), icon=ft.Icons.STOREFRONT, bgcolor="#00A896", color=ft.Colors.WHITE, on_click=open_crm),
+                                ft.Button(content=ft.Text("Закрыть"), bgcolor="#555555", color=ft.Colors.WHITE, on_click=lambda _: self.page.pop_dialog())
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                         )
@@ -289,7 +290,7 @@ class SimulatorScreen:
                 expand=True,
                 bgcolor="#2D2D2D",
                 color="#FFFFFF",
-                border_color="#555555",
+                border=ft.InputBorder.NONE,
                 height=45,
                 text_style=ft.TextStyle(font_family="Courier New", size=13),
             )
@@ -341,13 +342,12 @@ class SimulatorScreen:
             )
 
         self.interpret_container = ft.Column(controls=[], spacing=8)
-        self.interpret_buttons = []
 
         top_panel = ft.Row(
             controls=[
                 ft.Text(f"Заявка {self.current_case['number']}", size=13, color=text_secondary(self.page)),
                 ft.TextButton(
-                    "Заявка",
+                    content=ft.Text("Заявка"),
                     icon=ft.Icons.VISIBILITY,
                     style=ft.ButtonStyle(color=text_accent(self.page)),
                     on_click=self._show_ticket_info
@@ -399,15 +399,47 @@ class SimulatorScreen:
         self._add_console_line(output)
 
         if not self.is_advanced:
-            explanation = cmd.get("explanation", "")
-            if explanation:
-                self._show_interpretation(cmd, explanation)
-            else:
-                self._show_interpretation(cmd, None)
+            theory_text = cmd.get("theory") or cmd.get("explanation", "")
+            self._show_interpretation(cmd, theory_text)
         else:
+            self.page.run_task(self._increment_cmd_master)
             self.current_command_idx += 1
             self.page.update()
             self._show_console()
+
+    async def _increment_cmd_master(self):
+        """Увеличивает счётчик ручных команд для ачивки cmd_master."""
+        try:
+            progress = await load_progress()
+            count = int(progress.get("__cmd_master_count__", 0)) + 1
+            progress["__cmd_master_count__"] = count
+
+            earned = progress.get("__achievements__", [])
+            earned_ids = [a["id"] for a in earned]
+            new_achievements = []
+
+            if count >= 10 and "cmd_master" not in earned_ids:
+                for ach in get_all_achievements():
+                    if ach["id"] == "cmd_master":
+                        new_achievements.append(ach)
+                        break
+
+            if new_achievements:
+                progress = await save_achievements(progress, new_achievements)
+
+            await save_progress(progress)
+
+            if new_achievements:
+                names = ", ".join([f"{a['icon']} {a['title']}" for a in new_achievements])
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"🏆 Получено достижение: {names}", color=ft.Colors.WHITE),
+                    bgcolor="#5A00FF",
+                    duration=2500,
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+        except Exception as e:
+            print(f"Ошибка счётчика cmd_master: {e}")
 
     def _show_interpretation(self, cmd: dict, explanation: str):
         question = cmd.get("question", "")
@@ -415,13 +447,24 @@ class SimulatorScreen:
 
         controls = []
         
+        # --- Блок "💡 Теория" ---
         if explanation:
             controls.append(
                 ft.Container(
-                    content=ft.Text(f"💡 {explanation}", size=13, color=text_primary(self.page), selectable=True),
-                    padding=ft.Padding.all(10),
-                    bgcolor=bg_card_alt(self.page),
+                    content=ft.Column(
+                        controls=[
+                            ft.Row(controls=[
+                                ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, color="#FFB300", size=20),
+                                ft.Text("Теория", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                            ], spacing=5),
+                            ft.Text(explanation, size=13, color=text_primary(self.page), selectable=True),
+                        ],
+                        spacing=5,
+                    ),
+                    padding=ft.Padding.all(12),
+                    bgcolor=("#FFF8E1" if self.page.theme_mode != ft.ThemeMode.DARK else "#332D1C"),
                     border_radius=8,
+                    border=ft.Border.all(1, "#FFE082" if self.page.theme_mode != ft.ThemeMode.DARK else "#554A2C"),
                 )
             )
 
@@ -446,9 +489,7 @@ class SimulatorScreen:
                 )
             )
         else:
-            if answers:
-                pass
-            else:
+            if not answers:
                 next_btn = ft.Button(
                     content=ft.Text("Продолжить →", color=ft.Colors.WHITE),
                     bgcolor="#5A00FF",
@@ -533,7 +574,7 @@ class SimulatorScreen:
         secs = self.timer_seconds % 60
 
         final_output_text = final_cmd.get("output", "")
-        explanation = final_cmd.get("explanation", "")
+        final_explanation = final_cmd.get("theory") or final_cmd.get("explanation", "")
 
         card = ft.Container(
             content=ft.Column(
@@ -565,16 +606,21 @@ class SimulatorScreen:
                     ),
                     ft.Container(height=10),
                     ft.Container(
-                        content=ft.Text(
-                            f"💡 {explanation}" if explanation else "",
-                            size=13,
-                            color=text_primary(self.page),
-                            selectable=True,
+                        content=ft.Column(
+                            controls=[
+                                ft.Row(controls=[
+                                    ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, color="#FFB300", size=20),
+                                    ft.Text("Теория", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                                ], spacing=5),
+                                ft.Text(final_explanation, size=13, color=text_primary(self.page), selectable=True),
+                            ],
+                            spacing=5,
                         ),
-                        padding=ft.Padding.all(10),
-                        bgcolor=bg_card_alt(self.page),
+                        padding=ft.Padding.all(12),
+                        bgcolor=("#FFF8E1" if self.page.theme_mode != ft.ThemeMode.DARK else "#332D1C"),
                         border_radius=8,
-                        visible=bool(explanation)
+                        border=ft.Border.all(1, "#FFE082" if self.page.theme_mode != ft.ThemeMode.DARK else "#554A2C"),
+                        visible=bool(final_explanation)
                     ),
                 ],
                 spacing=8,
