@@ -54,6 +54,7 @@ def build_background() -> ft.Control:
 async def main(page: ft.Page):
     page.title = "SupportDesk Mobile"
     
+    # --- НАСТРОЙКА СОВРЕМЕННОЙ ТЕМЫ ---
     page.fonts = {
         "Inter": "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf"
     }
@@ -190,7 +191,7 @@ async def main(page: ft.Page):
                     set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                 elif section == "Прогресс":
-                    progress_screen = ProgressScreen(page)
+                    progress_screen = ProgressScreen(page, on_start_training=lambda: open_section("Тренажёры"))
                     async def load_progress_screen():
                         body = await progress_screen.build()
                         back_btn = ft.TextButton(
@@ -201,7 +202,8 @@ async def main(page: ft.Page):
                     page.run_task(load_progress_screen)
 
                 elif section == "Профиль":
-                    body = ProfileScreen(page).build()
+                    # Передаем функцию для открытия прогресса
+                    body = ProfileScreen(page, on_show_progress=lambda: open_section("Прогресс")).build()
                     back_btn = ft.TextButton(
                         content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
                         on_click=lambda e: page.run_task(show_main_screen)
@@ -248,13 +250,13 @@ async def main(page: ft.Page):
                 ink=True,
             )
 
+        # Убрали карточку "Прогресс", теперь их 5
         cards_column = ft.ResponsiveRow(
             controls=[
                 make_card("Справочник", "База знаний и статьи", ft.Icons.MENU_BOOK, text_accent(page), "Справочник"),
                 make_card("Тренажёры", "L1, L2, L3 — симулятор заявок", ft.Icons.SCHOOL, text_accent(page), "Тренажёры"),
                 make_card("Тесты", "Проверка знаний (25 вопросов)", ft.Icons.QUIZ, text_accent(page), "Тесты"),
-                make_card("Прогресс", "Статистика обучения", ft.Icons.BAR_CHART, text_accent(page), "Прогресс"),
-                make_card("Профиль", "Настройки и история тестов", ft.Icons.PERSON, text_accent(page), "Профиль"),
+                make_card("Профиль", "Настройки, прогресс и история тестов", ft.Icons.PERSON, text_accent(page), "Профиль"),
                 make_card("О программе", "Информация об авторе и версии", ft.Icons.INFO, text_accent(page), "О программе"),
             ],
             spacing=15, run_spacing=15,

@@ -10,8 +10,9 @@ from app.ui.theme_colors import (
 
 
 class ProgressScreen:
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page, on_start_training=None):
         self.page = page
+        self.on_start_training = on_start_training
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.progress_data = {}
 
@@ -26,10 +27,28 @@ class ProgressScreen:
 
         # --- Блок заявок ---
         if total_cases == 0:
+            start_btn = ft.Button(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.PLAY_ARROW, color="#FFFFFF"),
+                        ft.Text("Начать тренировку", color="#FFFFFF", weight=ft.FontWeight.BOLD)
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER
+                ),
+                bgcolor="#5A00FF",
+                width=250,
+                height=50,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
+                on_click=lambda e: self.on_start_training() if self.on_start_training else None
+            )
+
             cases_section = ft.Column(
                 controls=[
-                    ft.Icon(icon=ft.Icons.INSIGHTS, size=60, color=text_secondary(self.page)),
-                    ft.Text("Пока нет пройденных заявок", size=18, weight=ft.FontWeight.BOLD, color=text_secondary(self.page)),
+                    ft.Icon(icon=ft.Icons.INSIGHTS, size=80, color=ft.Colors.with_opacity(0.5, "#5A00FF")),
+                    ft.Text("Здесь пока пусто", size=20, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                    ft.Text("Реши свою первую заявку, чтобы увидеть статистику и прогресс!", size=14, color=text_secondary(self.page), text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=20),
+                    start_btn
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=10,
@@ -37,7 +56,7 @@ class ProgressScreen:
         else:
             total_time = 0
             best_time = 999999
-            list_items = []
+            list_items = [] # Сюда соберем список для модального окна
 
             for case_id, data in cases_data.items():
                 time_spent = data.get("time", 0)
@@ -48,6 +67,7 @@ class ProgressScreen:
                 mins = time_spent // 60
                 secs = time_spent % 60
                 
+                # Элемент списка для модального окна
                 list_items.append(
                     ft.Container(
                         content=ft.Row(
@@ -77,6 +97,7 @@ class ProgressScreen:
             best_mins = best_time // 60
             best_secs = best_time % 60
 
+            # Красивая карточка со статистикой
             stats_card = ft.Container(
                 content=ft.Row(
                     controls=[
@@ -91,13 +112,49 @@ class ProgressScreen:
                 bgcolor=bg_card(self.page), padding=15, border_radius=14, shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
             )
 
-            list_card = ft.Container(
-                content=ft.Column(controls=[ft.Text("История решений:", size=16, weight=ft.FontWeight.BOLD, color=text_primary(self.page)), ft.Container(height=10), ft.Column(controls=list_items, spacing=10, scroll=ft.ScrollMode.AUTO)]),
-                bgcolor=bg_card_alt(self.page), padding=15, border_radius=10,
+            # Функция открытия истории заявок в модальном окне
+            def show_cases_history(e):
+                dialog = ft.AlertDialog(
+                    title=ft.Text("История заявок", color=text_primary(self.page)),
+                    content=ft.Container(
+                        content=ft.Column(
+                            controls=list_items,
+                            spacing=10,
+                            scroll=ft.ScrollMode.AUTO,
+                        ),
+                        width=500,
+                        height=400,
+                    ),
+                    bgcolor=text_secondary(self.page) if self.page.theme_mode == ft.ThemeMode.LIGHT else "#1E1E1E",
+                    actions=[
+                        ft.TextButton("Закрыть", on_click=lambda _: self.page.pop_dialog(), style=ft.ButtonStyle(color=text_accent(self.page)))
+                    ],
+                )
+                self.page.show_dialog(dialog)
+
+            history_btn = ft.Button(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.LIST_ALT, color=text_accent(self.page)),
+                        ft.Text("Посмотреть историю заявок", color=text_accent(self.page), weight=ft.FontWeight.BOLD),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER
+                ),
+                bgcolor="transparent",
+                height=45,
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=12),
+                    side=ft.BorderSide(1, text_accent(self.page))
+                ),
+                on_click=show_cases_history,
             )
 
             cases_section = ft.Column(
-                controls=[stats_card, ft.Container(height=20), list_card],
+                controls=[
+                    stats_card, 
+                    ft.Container(height=10), 
+                    history_btn
+                ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             )
 
@@ -160,6 +217,7 @@ class ProgressScreen:
             ),
             bgcolor="#5A00FF",
             height=50,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
             on_click=show_achievements,
         )
 
