@@ -3,6 +3,7 @@
 import json
 import random
 import threading
+import asyncio
 from importlib import resources
 
 import flet as ft
@@ -40,6 +41,7 @@ class SimulatorScreen:
         self.console_list = None
         self.timer_text = None
         self.interpret_container = None
+        self.animation_active = False
 
     def _load_all_cases(self) -> list:
         cases = []
@@ -62,6 +64,7 @@ class SimulatorScreen:
         return ft.Column(controls=[self.container], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
     def _show_next_case(self):
+        self.animation_active = False # Отключаем анимацию, если она была
         if not self.remaining_ids:
             self.remaining_ids = [c["id"] for c in self.all_cases]
 
@@ -408,7 +411,6 @@ class SimulatorScreen:
             self._show_console()
 
     async def _increment_cmd_master(self):
-        """Увеличивает счётчик ручных команд для ачивки cmd_master."""
         try:
             progress = await load_progress()
             count = int(progress.get("__cmd_master_count__", 0)) + 1
@@ -420,9 +422,7 @@ class SimulatorScreen:
 
             if count >= 10 and "cmd_master" not in earned_ids:
                 for ach in get_all_achievements():
-                    if ach["id"] == "cmd_master":
-                        new_achievements.append(ach)
-                        break
+                    if ach["id"] == "cmd_master": new_achievements.append(ach); break
 
             if new_achievements:
                 progress = await save_achievements(progress, new_achievements)
@@ -447,7 +447,6 @@ class SimulatorScreen:
 
         controls = []
         
-        # --- Блок "💡 Теория" ---
         if explanation:
             controls.append(
                 ft.Container(
@@ -519,8 +518,32 @@ class SimulatorScreen:
             button.content.color = ft.Colors.WHITE
             self.page.update()
 
+    async def _animate_success(self, icon_control: ft.Icon, scale: float = 1.0, direction: int = 1):
+        """Плавная пульсация иконки успеха."""
+        while self.animation_active:
+            await asyncio.sleep(0.05) # Пауза, чтобы не грузить процессор
+            
+            if not self.animation_active:
+                break
+                
+            step = 0.05 * direction
+            new_scale = scale + step
+            
+            if new_scale > 1.2:
+                new_scale = 1.2
+                direction = -1
+            elif new_scale < 0.9:
+                new_scale = 0.9
+                direction = 1
+                
+            icon_control.scale = ft.Scale(scale=new_scale)
+            self.page.update()
+            
+            scale = new_scale
+
     def _show_solution(self):
         self.timer_running = False
+        self.animation_active = True # Включаем анимацию
 
         commands = self.current_case.get("commands", [])
         final_cmd = None
@@ -576,17 +599,17 @@ class SimulatorScreen:
         final_output_text = final_cmd.get("output", "")
         final_explanation = final_cmd.get("theory") or final_cmd.get("explanation", "")
 
+        # Иконка с анимацией
+        success_icon = ft.Icon(icon=ft.Icons.CHECK_CIRCLE, color="#00A896", size=60)
+        
+        # Запускаем асинхронную анимацию в фоне
+        self.page.run_task(self._animate_success, success_icon, 1.0, 1)
+
         card = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Icon(icon=ft.Icons.CHECK_CIRCLE, color="#00A896", size=36),
-                            ft.Text("Заявка закрыта!", size=20, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
-                        ],
-                        spacing=10,
-                        alignment=ft.MainAxisAlignment.CENTER,
-                    ),
+                    success_icon, # Анимированная иконка
+                    ft.Text("Заявка закрыта!", size=22, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                     ft.Text(f"Заявка {self.current_case['number']}", size=13, color=text_secondary(self.page)),
                     ft.Text(f"Время решения: {mins:02d}:{secs:02d}", size=14, color=text_accent(self.page), weight=ft.FontWeight.BOLD),
                     ft.Divider(height=1, color=border_color(self.page)),
