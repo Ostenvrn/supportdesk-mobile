@@ -54,24 +54,17 @@ def build_background() -> ft.Control:
 async def main(page: ft.Page):
     page.title = "SupportDesk Mobile"
     
-    # --- НАСТРОЙКА СОВРЕМЕННОЙ ТЕМЫ ---
     page.fonts = {
         "Inter": "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf"
     }
     page.theme = ft.Theme(
         font_family="Inter",
-        color_scheme=ft.ColorScheme(
-            primary="#5A00FF",
-            secondary="#00A896",
-        ),
+        color_scheme=ft.ColorScheme(primary="#5A00FF", secondary="#00A896"),
         visual_density=ft.VisualDensity.COMFORTABLE,
     )
     page.dark_theme = ft.Theme(
         font_family="Inter",
-        color_scheme=ft.ColorScheme(
-            primary="#B388FF",
-            secondary="#69DB7C",
-        ),
+        color_scheme=ft.ColorScheme(primary="#B388FF", secondary="#69DB7C"),
         visual_density=ft.VisualDensity.COMFORTABLE,
     )
 
@@ -107,14 +100,8 @@ async def main(page: ft.Page):
 
     def show_profile_screen():
         name_input = ft.TextField(
-            label="Ваше имя", 
-            hint_text="Например, Александр", 
-            width=300, 
-            autofocus=True, 
-            border=ft.InputBorder.OUTLINE,
-            color=text_primary(page),
-            label_style=ft.TextStyle(color=text_secondary(page)),
-            border_radius=12,
+            label="Ваше имя", hint_text="Например, Александр", width=300, autofocus=True,
+            border=ft.InputBorder.OUTLINE, color=text_primary(page), label_style=ft.TextStyle(color=text_secondary(page)),
         )
 
         async def save_and_continue(e):
@@ -130,10 +117,7 @@ async def main(page: ft.Page):
 
         save_btn = ft.Button(
             content=ft.Text("Сохранить и продолжить", color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD), 
-            bgcolor="#5A00FF", 
-            on_click=save_and_continue, 
-            width=300, 
-            height=50,
+            bgcolor="#5A00FF", on_click=save_and_continue, width=300, height=50,
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
         )
 
@@ -156,53 +140,81 @@ async def main(page: ft.Page):
             try:
                 if section == "Справочник":
                     body = KnowledgeScreen(page).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
-                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
+                        on_click=lambda e: page.run_task(show_main_screen)
+                    )
+                    set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                 elif section == "Тренажёры":
                     def start_sim(level: int, is_advanced: bool):
                         sim = SimulatorScreen(page, on_back=lambda: page.run_task(show_main_screen), level=level, is_advanced=is_advanced)
                         body = sim.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тренажёры"))
-                        set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                        back_btn = ft.TextButton(
+                            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5),
+                            on_click=lambda e: open_section("Тренажёры")
+                        )
+                        set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
                     
                     def start_terminal():
                         term = TerminalScreen(page, on_back=lambda: open_section("Тренажёры"))
                         body = term.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тренажёры"))
-                        set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                        back_btn = ft.TextButton(
+                            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору тренажёра", color=text_accent(page), size=14)], spacing=5),
+                            on_click=lambda e: open_section("Тренажёры")
+                        )
+                        set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                     body = SimulatorSelectionScreen(page, on_start_simulator=start_sim, on_start_terminal=start_terminal).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
-                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
+                        on_click=lambda e: page.run_task(show_main_screen)
+                    )
+                    set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                 elif section == "Тесты":
                     def start_quiz(level: int):
                         quiz = QuizScreen(page, level=level, on_back=lambda: page.run_task(show_main_screen))
                         body = quiz.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору теста", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: open_section("Тесты"))
-                        set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                        back_btn = ft.TextButton(
+                            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("К выбору теста", color=text_accent(page), size=14)], spacing=5),
+                            on_click=lambda e: open_section("Тесты")
+                        )
+                        set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
+                    
                     body = QuizSelectionScreen(page, on_start_quiz=start_quiz).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
-                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
+                        on_click=lambda e: page.run_task(show_main_screen)
+                    )
+                    set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                 elif section == "Прогресс":
                     progress_screen = ProgressScreen(page)
                     async def load_progress_screen():
                         body = await progress_screen.build()
-                        back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
-                        set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                        back_btn = ft.TextButton(
+                            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
+                            on_click=lambda e: page.run_task(show_main_screen)
+                        )
+                        set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
                     page.run_task(load_progress_screen)
 
                 elif section == "Профиль":
                     body = ProfileScreen(page).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
-                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
+                        on_click=lambda e: page.run_task(show_main_screen)
+                    )
+                    set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                 elif section == "О программе":
                     body = AboutScreen(page, on_back=lambda: page.run_task(show_main_screen)).build()
-                    back_btn = ft.TextButton(content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5), on_click=lambda e: page.run_task(show_main_screen))
-                    set_screen(ft.Column(controls=[back_btn, body], expand=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
+                    back_btn = ft.TextButton(
+                        content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
+                        on_click=lambda e: page.run_task(show_main_screen)
+                    )
+                    set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True))
 
                 else:
                     page.snack_bar = ft.SnackBar(ft.Text(f"Раздел '{section}' в разработке"))
@@ -210,11 +222,18 @@ async def main(page: ft.Page):
                     page.update()
             except Exception as ex:
                 print(f"Ошибка при открытии раздела {section}: {ex}")
-                error_screen = ft.Column(controls=[ft.Icon(ft.Icons.ERROR, color="red", size=50), ft.Text(f"Ошибка: {ex}", color="red", selectable=True), ft.TextButton("Назад", on_click=lambda e: page.run_task(show_main_screen))], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                error_screen = ft.Column(
+                    controls=[
+                        ft.Icon(ft.Icons.ERROR, color="red", size=50), 
+                        ft.Text(f"Ошибка: {ex}", color="red", selectable=True), 
+                        ft.TextButton(content=ft.Text("Назад"), on_click=lambda e: page.run_task(show_main_screen))
+                    ], 
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                )
                 set_screen(error_screen)
 
         def make_card(title: str, subtitle: str, icon, color: str, section: str):
-            card = ft.Container(
+            return ft.Container(
                 content=ft.Row(
                     controls=[
                         ft.Container(content=ft.Icon(icon=icon, size=32, color=color), width=56, height=56, bgcolor="#F4F0FF" if not page.theme_mode == ft.ThemeMode.DARK else "#3D3D1C", border_radius=28, alignment=ft.Alignment.CENTER),
@@ -228,7 +247,6 @@ async def main(page: ft.Page):
                 on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=10, color="#00000015", offset=ft.Offset(0, 4)),
                 ink=True,
             )
-            return card
 
         cards_column = ft.ResponsiveRow(
             controls=[
