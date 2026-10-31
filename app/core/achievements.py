@@ -36,22 +36,27 @@ ALL_ACHIEVEMENTS = [
     {"id": "marathon", "title": "Марафонец", "description": "Решил 5 заявок подряд", "icon": "🏃"},
     {"id": "reset_button", "title": "Начать сначала", "description": "Сбросил прогресс, чтобы учиться заново", "icon": "🔄"},
     
-    # --- НОВЫЕ 10 АЧИВОК ---
-    {"id": "cmd_master", "title": "Мастер команд", "description": "Ввёл 10 команд вручную в продвинутом режиме", "icon": "⌨️"},
+    # Терминал
+    {"id": "cmd_master", "title": "Мастер команд", "description": "Ввёл 10 команд вручную", "icon": "⌨️"},
     {"id": "no_hints", "title": "Без подсказок", "description": "Решил 5 заявок в продвинутом режиме", "icon": "🙈"},
     {"id": "night_shift", "title": "Ночная смена", "description": "Решил заявку после 00:00", "icon": "🌙"},
     {"id": "early_bird", "title": "Ранняя пташка", "description": "Решил заявку до 06:00", "icon": "🌅"},
     {"id": "b2b_hero", "title": "Герой B2B", "description": "Решил 3 корпоративные заявки", "icon": "💼"},
     {"id": "dns_hunter", "title": "Охотник за DNS", "description": "Решил 3 заявки по теме DNS", "icon": "🔍"},
     {"id": "test_streak", "title": "Стабильность", "description": "Прошёл 3 теста подряд на проходной балл", "icon": "📈"},
-    {"id": "all_topics", "title": "Эрудит", "description": "Решил заявки из всех 4 тем (интернет, ТВ, камеры, гос)", "icon": "🧩"},
+    {"id": "all_topics", "title": "Эрудит", "description": "Решил заявки из всех 4 тем", "icon": "🧩"},
     {"id": "fast_reader", "title": "Быстрое чтение", "description": "Прочитал 5 статей за один день", "icon": "📖"},
-    {"id": "legend", "title": "Легенда поддержки", "description": "Достиг 50 решённых заявок", "icon": "👑"}
+    {"id": "legend", "title": "Легенда поддержки", "description": "Достиг 50 решённых заявок", "icon": "👑"},
+    
+    # Новые в 1.3.0 (Терминал)
+    {"id": "hacker", "title": "Хакер", "description": "Ввёл команду telnet в терминале", "icon": "💻"},
+    {"id": "net_engineer", "title": "Сетевой инженер", "description": "Ввёл 100 команд в терминале", "icon": "🛠️"},
+    {"id": "sfc_scan", "title": "Тяжелая артефакт", "description": "Запустил проверку системы (sfc /scannow)", "icon": "🩺"},
+    {"id": "cleaner", "title": "Очиститель", "description": "Очистил экран терминала 10 раз", "icon": "🧹"}
 ]
 
 
 async def check_achievements(progress: dict, current_case: dict, time_spent: int, errors_count: int = 0) -> list:
-    """Проверяет ачивки для тренажёра."""
     earned = progress.get("__achievements__", [])
     earned_ids = [a["id"] for a in earned]
     new_achievements = []
@@ -59,7 +64,6 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
     all_cases = {k: v for k, v in progress.items() if not k.startswith("__")}
     solved_count = len(all_cases)
 
-    # Базовые
     if solved_count >= 1 and "first_blood" not in earned_ids: new_achievements.append(_get_ach_by_id("first_blood"))
     if time_spent < 60 and "speed_demon" not in earned_ids: new_achievements.append(_get_ach_by_id("speed_demon"))
     if solved_count >= 5 and "veteran_5" not in earned_ids: new_achievements.append(_get_ach_by_id("veteran_5"))
@@ -67,7 +71,6 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
     if solved_count >= 25 and "veteran_25" not in earned_ids: new_achievements.append(_get_ach_by_id("veteran_25"))
     if solved_count >= 50 and "legend" not in earned_ids: new_achievements.append(_get_ach_by_id("legend"))
 
-    # Тематические
     topic_counts = {}
     for k, v in all_cases.items():
         if isinstance(v, dict):
@@ -80,11 +83,9 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
     if topic_counts.get("cameras", 0) >= 3 and "eye_of_falcon" not in earned_ids: new_achievements.append(_get_ach_by_id("eye_of_falcon"))
     if topic_counts.get("dns", 0) >= 3 and "dns_hunter" not in earned_ids: new_achievements.append(_get_ach_by_id("dns_hunter"))
     
-    # Эрудит (все 4 темы)
     if len([t for t in topic_counts.keys() if t in ["internet", "tv", "cameras", "gov"]]) == 4 and "all_topics" not in earned_ids:
          new_achievements.append(_get_ach_by_id("all_topics"))
 
-    # Качество
     if errors_count == 0 and "perfect_run" not in earned_ids:
         if current_case.get("advanced"): new_achievements.append(_get_ach_by_id("perfect_run"))
     if errors_count >= 5 and "survivor" not in earned_ids: new_achievements.append(_get_ach_by_id("survivor"))
@@ -96,12 +97,8 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
         if no_error_streak >= 2 and "fast_learner" not in earned_ids: new_achievements.append(_get_ach_by_id("fast_learner"))
         if no_error_streak >= 4 and "marathon" not in earned_ids: new_achievements.append(_get_ach_by_id("marathon"))
 
-    # Время суток
     from datetime import datetime
     now = datetime.now()
-    if current_case.get("advanced") and "no_hints" not in earned_ids:
-        # Тут можно добавить логику, если мы отслеживаем кол-во решенных advanced заявок
-        pass 
     if now.hour >= 0 and now.hour < 6 and "night_shift" not in earned_ids: new_achievements.append(_get_ach_by_id("night_shift"))
     if now.hour >= 6 and now.hour < 9 and "early_bird" not in earned_ids: new_achievements.append(_get_ach_by_id("early_bird"))
 
@@ -109,7 +106,6 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
 
 
 async def check_quiz_achievements(quiz_results: list, progress: dict) -> list:
-    """Проверяет ачивки, связанные с тестами."""
     earned = progress.get("__achievements__", [])
     earned_ids = [a["id"] for a in earned]
     new_achievements = []
@@ -133,7 +129,6 @@ async def check_quiz_achievements(quiz_results: list, progress: dict) -> list:
 
 
 async def check_library_achievement(progress: dict, articles_read: int) -> list:
-    """Проверяет ачивку за чтение статей."""
     earned = progress.get("__achievements__", [])
     earned_ids = [a["id"] for a in earned]
     new_achievements = []
