@@ -1,11 +1,19 @@
 [project]
 name = "supportdesk-mobile"
-version = "1.2.0"
+version = "1.3.0"
 description = "Mobile trainer for telecom support engineers"
 requires-python = ">=3.12"
 
 [tool.flet]
 product = "SupportDesk Mobile"
 org = "com.ostenvrn"
-build_number = 3
-icon = "icon.png"
+build_number = 4
+
+[tool.flet.icons]
+android = "icon.png"
+
+[tool.flet.splash]
+color = "#5A00FF"
+dark_color = "#121212"
+android_gravity = "fill"
+hide_animation = true
