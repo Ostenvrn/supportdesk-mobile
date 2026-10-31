@@ -31,21 +31,24 @@ class TerminalScreen:
     def __init__(self, page: ft.Page, on_back):
         self.page = page
         self.on_back = on_back
-        self.output_list = None  # Теперь это ListView
+        self.output_list = None
         self.input_field = None
         self.session_command_count = 0
         self.container = ft.Container(expand=True)
+        
+        # --- История команд ---
+        self.command_history = []
+        self.history_index = -1
 
     def build(self) -> ft.Control:
-        # --- Список вывода (замена TextField на ListView) ---
+        # --- Список вывода ---
         self.output_list = ft.ListView(
             expand=True,
             spacing=5,
-            auto_scroll=True,  # Встроенная автопрокрутка Flet
+            auto_scroll=True,
             padding=10,
         )
         
-        # Добавляем приветствие
         welcome_text = (
             "Добро пожаловать в песочницу SupportDesk!\n"
             "Введите команду и нажмите Enter.\n"
@@ -56,7 +59,6 @@ class TerminalScreen:
         )
         self._add_text_to_console(welcome_text, "#00FF66")
 
-        # Обертка для списка (чтобы был черный фон и рамки)
         console_container = ft.Container(
             content=self.output_list,
             bgcolor="#000000",
@@ -78,6 +80,20 @@ class TerminalScreen:
             content=ft.Text("Выполнить", color="#FFFFFF"),
             bgcolor="#5A00FF",
             on_click=self._on_command_submit,
+        )
+
+        # --- Кнопки истории (Вверх/Вниз) ---
+        history_up_btn = ft.IconButton(
+            icon=ft.Icons.ARROW_UPWARD,
+            tooltip="Предыдущая команда",
+            on_click=self._on_history_up,
+            icon_color=text_primary(self.page),
+        )
+        history_down_btn = ft.IconButton(
+            icon=ft.Icons.ARROW_DOWNWARD,
+            tooltip="Следующая команда",
+            on_click=self._on_history_down,
+            icon_color=text_primary(self.page),
         )
 
         copy_button = ft.IconButton(
@@ -129,13 +145,23 @@ class TerminalScreen:
             border_radius=8,
         )
 
-        input_row = ft.Row(controls=[self.input_field, run_button], spacing=8)
+        # Строка ввода: [история вверх] [история вниз] [поле ввода] [кнопка выполнить]
+        input_row = ft.Row(
+            controls=[
+                history_up_btn, 
+                history_down_btn, 
+                self.input_field, 
+                run_button
+            ], 
+            spacing=5
+        )
+        
         bottom_row = ft.Row(controls=[back_button, random_button, copy_button, clear_button], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
         self.container.content = ft.Column(
             controls=[
                 warning,
-                console_container,  # Теперь здесь контейнер со списком
+                console_container,
                 chips_row,
                 input_row,
                 bottom_row,
@@ -151,12 +177,10 @@ class TerminalScreen:
         return self.container
 
     def _add_text_to_console(self, text: str, color: str = "#00FF66"):
-        """Добавляет текст в ListView."""
         if self.output_list is not None:
             self.output_list.controls.append(
                 ft.Text(text, size=13, color=color, font_family="Courier New", selectable=True)
             )
-            # Принудительная прокрутка вниз после добавления
             self.output_list.auto_scroll = True
             self.page.update()
 
@@ -178,6 +202,44 @@ class TerminalScreen:
             print(f"Ошибка загрузки счётчика: {e}")
             self.session_command_count = 0
 
+    # ==================================================================
+    # ИСТОРИЯ КОМАНД
+    # ==================================================================
+    
+    def _on_history_up(self, e):
+        """Нажата кнопка 'Вверх' (предыдущая команда)."""
+        if not self.command_history:
+            return
+        
+        # Двигаемся вверх по истории, но не выходим за пределы
+        if self.history_index > 0:
+            self.history_index -= 1
+        elif self.history_index == -1:
+            self.history_index = len(self.command_history) - 1
+            
+        self.input_field.value = self.command_history[self.history_index]
+        self.page.update()
+
+    def _on_history_down(self, e):
+        """Нажата кнопка 'Вниз' (следующая команда)."""
+        if not self.command_history or self.history_index == -1:
+            return
+            
+        # Двигаемся вниз по истории
+        if self.history_index < len(self.command_history) - 1:
+            self.history_index += 1
+            self.input_field.value = self.command_history[self.history_index]
+        else:
+            # Дошли до конца — очищаем поле
+            self.history_index = -1
+            self.input_field.value = ""
+            
+        self.page.update()
+
+    # ==================================================================
+    # ОБРАБОТЧИКИ КОМАНД
+    # ==================================================================
+
     def _on_chip_click(self, command: str):
         if self.input_field is not None:
             self.input_field.value = command
@@ -190,7 +252,6 @@ class TerminalScreen:
 
     def _on_copy_click(self, e):
         if self.output_list is not None:
-            # Собираем весь текст из Text-компонентов списка
             full_text = "\n".join([ctrl.value for ctrl in self.output_list.controls if isinstance(ctrl, ft.Text)])
             self.page.set_clipboard(full_text)
             self.page.snack_bar = ft.SnackBar(
@@ -225,7 +286,13 @@ class TerminalScreen:
             self._clear_output()
             return
 
-        # Добавляем эхо команды в консоль (белым цветом)
+        # --- Сохраняем в историю ---
+        # Не добавляем, если команда повторяет предыдущую
+        if not self.command_history or self.command_history[-1] != command:
+            self.command_history.append(command)
+        self.history_index = -1 # Сбрасываем позицию при новой команде
+
+        # Добавляем эхо команды в консоль
         self._add_text_to_console(f"\n> {command}", "#FFFFFF")
 
         try:
@@ -233,7 +300,6 @@ class TerminalScreen:
         except Exception as error:
             result = f"Ошибка эмулятора: {error}"
 
-        # Добавляем результат (зеленым)
         self._add_text_to_console(result)
 
         self.input_field.value = ""
