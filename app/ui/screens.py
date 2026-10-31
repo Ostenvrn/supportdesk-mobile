@@ -1,12 +1,6 @@
 # app/ui/screens.py
-#
-# Экраны приложения:
-# - KnowledgeScreen (Справочник с поиском и отметкой о прочтении)
-# - SimulatorSelectionScreen (Выбор уровня L1/L2/L3 для тренажёра + Терминал)
-# - QuizSelectionScreen (Выбор уровня для теста)
 
 import flet as ft
-
 from app.core.knowledge import get_categories, get_category_by_id, search_knowledge
 from app.core.storage import mark_article_read
 
@@ -21,7 +15,6 @@ class KnowledgeScreen:
 
     def build(self) -> ft.Control:
         self.show_categories()
-
         search_input = ft.TextField(
             hint_text="Поиск по справочнику...",
             prefix_icon=ft.Icons.SEARCH,
@@ -30,7 +23,6 @@ class KnowledgeScreen:
             height=50,
             on_change=self._on_search_change,
         )
-
         return ft.Column(
             controls=[
                 ft.Row(
@@ -56,62 +48,34 @@ class KnowledgeScreen:
             self.categories_container.visible = True
             self.page.update()
             return
-
         results = search_knowledge(query)
-        
         self.categories_container.visible = False
         self.search_results_container.visible = True
         self.search_results_container.controls.clear()
-
         if not results:
-            self.search_results_container.controls.append(
-                ft.Text("Ничего не найдено.", color="#666666", italic=True)
-            )
+            self.search_results_container.controls.append(ft.Text("Ничего не найдено.", color="#666666", italic=True))
         else:
             for res in results:
                 if res["type"] == "category":
                     btn = ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.FOLDER, color="#5A00FF"),
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(res["title"], size=14, weight=ft.FontWeight.BOLD),
-                                        ft.Text("Категория", size=10, color="#888888")
-                                    ],
-                                    spacing=0
-                                )
-                            ]
-                        ),
-                        padding=10,
-                        bgcolor="#FFFFFF",
-                        border_radius=8,
+                        content=ft.Row(controls=[
+                            ft.Icon(ft.Icons.FOLDER, color="#5A00FF"),
+                            ft.Column(controls=[ft.Text(res["title"], size=14, weight=ft.FontWeight.BOLD), ft.Text("Категория", size=10, color="#888888")], spacing=0)
+                        ]),
+                        padding=10, bgcolor="#FFFFFF", border_radius=8,
                         on_click=lambda e, cat_id=res["category_id"]: self.show_articles(cat_id)
                     )
                     self.search_results_container.controls.append(btn)
-
                 elif res["type"] == "article":
                     btn = ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.ARTICLE, color="#5A00FF"),
-                                ft.Column(
-                                    controls=[
-                                        ft.Text(res["title"], size=14, weight=ft.FontWeight.BOLD),
-                                        ft.Text(res["text"], size=12, color="#666666", max_lines=2)
-                                    ],
-                                    spacing=0,
-                                    expand=True
-                                )
-                            ]
-                        ),
-                        padding=10,
-                        bgcolor="#FFFFFF",
-                        border_radius=8,
+                        content=ft.Row(controls=[
+                            ft.Icon(ft.Icons.ARTICLE, color="#5A00FF"),
+                            ft.Column(controls=[ft.Text(res["title"], size=14, weight=ft.FontWeight.BOLD), ft.Text(res["text"], size=12, color="#666666", max_lines=2)], spacing=0, expand=True)
+                        ]),
+                        padding=10, bgcolor="#FFFFFF", border_radius=8,
                         on_click=lambda e, cat_id=res["category_id"], idx=res["article_index"]: self.show_article_text(cat_id, idx)
                     )
                     self.search_results_container.controls.append(btn)
-
         self.page.update()
 
     def show_categories(self):
@@ -120,13 +84,8 @@ class KnowledgeScreen:
             self.categories_container.controls = [ft.Text("База знаний пуста.", color="#666666", italic=True)]
             self.page.update()
             return
-
         self.categories_container.controls.clear()
-
-        cards = []
-        for cat in categories:
-            cards.append(self._make_category_card(cat))
-
+        cards = [self._make_category_card(cat) for cat in categories]
         self.categories_container.controls = [
             ft.Text("Выберите раздел:", size=14, color="#666666"),
             ft.Container(height=8),
@@ -137,60 +96,31 @@ class KnowledgeScreen:
     def _make_category_card(self, category: dict) -> ft.Control:
         def on_click(e):
             self.show_articles(category["id"])
-
         return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(icon=ft.Icons.ARTICLE, color="#5A00FF", size=24),
-                    ft.Column(
-                        controls=[
-                            ft.Text(category["name"], size=16, weight=ft.FontWeight.BOLD, color="#333333"),
-                            ft.Text(category.get("description", ""), size=12, color="#666666"),
-                        ],
-                        spacing=2,
-                        expand=True,
-                    ),
-                    ft.Icon(icon=ft.Icons.CHEVRON_RIGHT, color="#999999", size=20),
-                ],
-                spacing=12,
-            ),
-            bgcolor="#FFFFFF",
-            border_radius=10,
-            padding=15,
-            on_click=on_click,
-            shadow=ft.BoxShadow(blur_radius=3, color="#00000010"),
+            content=ft.Row(controls=[
+                ft.Icon(icon=ft.Icons.ARTICLE, color="#5A00FF", size=24),
+                ft.Column(controls=[ft.Text(category["name"], size=16, weight=ft.FontWeight.BOLD, color="#333333"), ft.Text(category.get("description", ""), size=12, color="#666666")], spacing=2, expand=True),
+                ft.Icon(icon=ft.Icons.CHEVRON_RIGHT, color="#999999", size=20),
+            ], spacing=12),
+            bgcolor="#FFFFFF", border_radius=10, padding=15, on_click=on_click, shadow=ft.BoxShadow(blur_radius=3, color="#00000010"),
         )
 
     def show_articles(self, category_id: str):
         self.search_results_container.visible = False
         self.categories_container.visible = True
-
         category = get_category_by_id(category_id)
-        if not category:
-            return
-
+        if not category: return
         self.current_category = category
         articles = category.get("articles", [])
         if not articles:
             self.categories_container.controls = [ft.Text("В этой категории пока нет статей.", color="#666666", italic=True)]
             self.page.update()
             return
-
-        cards = []
-        for idx, article in enumerate(articles):
-            cards.append(self._make_article_card(category_id, idx, article))
-
+        cards = [self._make_article_card(category_id, idx, article) for idx, article in enumerate(articles)]
         back_btn = ft.TextButton(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"),
-                    ft.Text("К разделам", color="#5A00FF", size=14),
-                ],
-                spacing=5,
-            ),
+            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("К разделам", color="#5A00FF", size=14)], spacing=5),
             on_click=lambda e: self.show_categories(),
         )
-
         self.categories_container.controls = [
             back_btn,
             ft.Text(category["name"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
@@ -202,171 +132,111 @@ class KnowledgeScreen:
     def _make_article_card(self, category_id: str, idx: int, article: dict) -> ft.Control:
         def on_click(e):
             self.show_article_text(category_id, idx)
-
         return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(icon=ft.Icons.DESCRIPTION, color="#5A00FF", size=22),
-                    ft.Text(article["title"], size=14, color="#333333", expand=True),
-                    ft.Icon(icon=ft.Icons.CHEVRON_RIGHT, color="#999999", size=18),
-                ],
-                spacing=10,
-            ),
-            bgcolor="#FFFFFF",
-            border_radius=8,
-            padding=12,
-            on_click=on_click,
+            content=ft.Row(controls=[
+                ft.Icon(icon=ft.Icons.DESCRIPTION, color="#5A00FF", size=22),
+                ft.Text(article["title"], size=14, color="#333333", expand=True),
+                ft.Icon(icon=ft.Icons.CHEVRON_RIGHT, color="#999999", size=18),
+            ], spacing=10),
+            bgcolor="#FFFFFF", border_radius=8, padding=12, on_click=on_click,
         )
 
     def show_article_text(self, category_id: str, article_idx: int):
         self.search_results_container.visible = False
         self.categories_container.visible = True
-
         self.page.run_task(mark_article_read, category_id, article_idx)
-
         category = get_category_by_id(category_id)
-        if not category:
-            return
+        if not category: return
         articles = category.get("articles", [])
-        if article_idx >= len(articles):
-            return
-
+        if article_idx >= len(articles): return
         article = articles[article_idx]
-
         back_btn = ft.TextButton(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"),
-                    ft.Text(f"К разделу «{category['name']}»", color="#5A00FF", size=13),
-                ],
-                spacing=5,
-            ),
+            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text(f"К разделу «{category['name']}»", color="#5A00FF", size=13)], spacing=5),
             on_click=lambda e: self.show_articles(category_id),
         )
-
         self.categories_container.controls = [
             back_btn,
             ft.Text(article["title"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
             ft.Container(height=10),
             ft.Column(
-                controls=[
-                    ft.Container(
-                        content=ft.Text(article["content"], size=14, color="#333333", selectable=True),
-                        padding=ft.Padding.all(15),
-                        bgcolor="#FFFFFF",
-                        border_radius=10,
-                    )
-                ],
-                scroll=ft.ScrollMode.AUTO,
-                expand=True,
+                controls=[ft.Container(content=ft.Text(article["content"], size=14, color="#333333", selectable=True), padding=ft.Padding.all(15), bgcolor="#FFFFFF", border_radius=10)],
+                scroll=ft.ScrollMode.AUTO, expand=True,
             ),
         ]
         self.page.update()
 
 
 class SimulatorSelectionScreen:
-    """Экран выбора уровня (L1, L2, L3) и режима (Обычный/Продвинутый + Терминал)."""
-    
     def __init__(self, page: ft.Page, on_start_simulator, on_start_terminal=None):
         self.page = page
         self.on_start_simulator = on_start_simulator
-        self.on_start_terminal = on_start_terminal  # Функция запуска терминала
+        self.on_start_terminal = on_start_terminal
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
         def make_level_card(level: int, title: str, desc: str, color: str):
             return ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Icon(icon=ft.Icons.LAYERS, size=40, color=color),
-                        ft.Text(f"Уровень L{level}", size=18, weight=ft.FontWeight.BOLD, color="#333333"),
-                        ft.Text(title, size=14, color=color, weight=ft.FontWeight.BOLD),
-                        ft.Text(desc, size=12, color="#666666", text_align=ft.TextAlign.CENTER),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=5,
-                ),
-                bgcolor="#FFFFFF",
-                padding=20,
-                border_radius=14,
-                width=160,
-                height=160,
+                content=ft.Column(controls=[
+                    ft.Icon(icon=ft.Icons.LAYERS, size=40, color=color),
+                    ft.Text(f"Уровень L{level}", size=18, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.Text(title, size=14, color=color, weight=ft.FontWeight.BOLD),
+                    ft.Text(desc, size=12, color="#666666", text_align=ft.TextAlign.CENTER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+                bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=160, 
                 shadow=ft.BoxShadow(blur_radius=4, color="#00000015"),
+                on_click=lambda e: self.on_start_simulator(level, False)
             )
 
-        card_l1 = make_level_card(1, "Базовая диагностика", "Кабель, роутер, DNS, простые сбои", "#00A896")
-        card_l2 = make_level_card(2, "Сетевые проблемы", "Wi-Fi, VLAN, скорость, маршруты", "#5A00FF")
-        card_l3 = make_level_card(3, "Инфраструктура", "B2B, VPN, госучреждения, ЭЦП", "#E63946")
+        card_l1 = make_level_card(1, "Базовая диагностика", "Кабель, роутер, DNS", "#00A896")
+        card_l2 = make_level_card(2, "Сетевые проблемы", "Wi-Fi, VLAN, маршруты", "#5A00FF")
+        card_l3 = make_level_card(3, "Инфраструктура", "B2B, VPN, ЭЦП", "#E63946")
 
-        def start_level(level: int, is_advanced: bool):
-            self.on_start_simulator(level, is_advanced)
-
-        card_l1.on_click = lambda e: start_level(1, False)
-        card_l2.on_click = lambda e: start_level(2, False)
-        card_l3.on_click = lambda e: start_level(3, False)
-
-        mode_label = ft.Text("Режим прохождения:", size=16, weight=ft.FontWeight.BOLD, color="#333333")
-        
         normal_btn = ft.Button(
-            content=ft.Text("Обычный режим (с подсказками)", color="#FFFFFF"),
-            bgcolor="#333333",
-            width=300,
-            height=45,
-            on_click=lambda e: self._show_mode_selection(start_level, is_advanced=False),
+            content=ft.Text("Обычный режим", color="#FFFFFF"),
+            bgcolor="#333333", width=300, height=45,
+            on_click=lambda e: self._show_mode_selection(False)
         )
         
         advanced_btn = ft.Button(
-            content=ft.Text("Продвинутый режим (ручной ввод)", color="#FFFFFF"),
-            bgcolor="#5A00FF",
-            width=300,
-            height=45,
-            on_click=lambda e: self._show_mode_selection(start_level, is_advanced=True),
+            content=ft.Text("Продвинутый режим", color="#FFFFFF"),
+            bgcolor="#5A00FF", width=300, height=45,
+            on_click=lambda e: self._show_mode_selection(True)
         )
 
-        # --- Блок кнопки Терминала ---
         terminal_btn = ft.Container()
         if self.on_start_terminal is not None:
             terminal_btn = ft.Button(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.TERMINAL, color="#FFFFFF", size=20),
-                        ft.Text("Свободный терминал (Песочница)", color="#FFFFFF", weight=ft.FontWeight.BOLD, size=14),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=8,
-                ),
-                bgcolor="#00A896",
-                width=300,
-                height=45,
-                on_click=lambda e: self.on_start_terminal(),
+                content=ft.Row(controls=[
+                    ft.Icon(ft.Icons.TERMINAL, color="#FFFFFF", size=20),
+                    ft.Text("Свободный терминал", color="#FFFFFF", weight=ft.FontWeight.BOLD, size=14),
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
+                bgcolor="#00A896", width=320, height=50, on_click=lambda e: self.on_start_terminal(),
             )
 
         self.container.content = ft.Column(
             controls=[
                 ft.Text("Выберите уровень поддержки", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                ft.Container(height=10),
+                ft.Text("(Нажмите на карточку для запуска в обычном режиме)", size=12, color="#666666"),
                 ft.Container(height=20),
                 ft.Row(controls=[card_l1, card_l2, card_l3], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
                 ft.Container(height=30),
-                mode_label,
+                ft.Text("Режим прохождения:", size=16, weight=ft.FontWeight.BOLD, color="#333333"),
                 ft.Container(height=10),
                 ft.Row(controls=[normal_btn, advanced_btn], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
                 ft.Container(height=20),
-                terminal_btn,
+                ft.Row(controls=[terminal_btn], alignment=ft.MainAxisAlignment.CENTER),
             ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            alignment=ft.MainAxisAlignment.CENTER,
-            expand=True,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, expand=True,
         )
         return self.container
 
-    def _show_mode_selection(self, start_callback, is_advanced: bool):
+    def _show_mode_selection(self, is_advanced: bool):
         def make_level_btn(level: int, name: str):
             return ft.Button(
                 content=ft.Text(f"Уровень L{level} ({name})", color="#FFFFFF"),
-                bgcolor="#5A00FF",
-                width=300,
-                height=45,
-                on_click=lambda e: (self.page.pop_dialog(), start_callback(level, is_advanced)),
+                bgcolor="#5A00FF", width=300, height=45,
+                on_click=lambda e: (self.page.pop_dialog(), self.on_start_simulator(level, is_advanced)),
             )
 
         dialog = ft.AlertDialog(
@@ -386,7 +256,6 @@ class SimulatorSelectionScreen:
 
 
 class QuizSelectionScreen:
-    """Экран выбора уровня для теста."""
     def __init__(self, page: ft.Page, on_start_quiz):
         self.page = page
         self.on_start_quiz = on_start_quiz
@@ -396,57 +265,17 @@ class QuizSelectionScreen:
         def start_quiz(level: int):
             self.on_start_quiz(level)
 
-        card_l1 = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.LOOKS_ONE, size=40, color="#00A896"),
-                    ft.Text("Тест L1", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Базовые знания", size=12, color="#666666"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=140,
-            on_click=lambda e: start_quiz(1),
-            shadow=ft.BoxShadow(blur_radius=4, color="#00000015"),
-        )
-
-        card_l2 = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.LOOKS_TWO, size=40, color="#5A00FF"),
-                    ft.Text("Тест L2", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Сетевые технологии", size=12, color="#666666"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=140,
-            on_click=lambda e: start_quiz(2),
-            shadow=ft.BoxShadow(blur_radius=4, color="#00000015"),
-        )
-
-        card_l3 = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.LOOKS_3, size=40, color="#E63946"),
-                    ft.Text("Тест L3", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Инфраструктура", size=12, color="#666666"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=140,
-            on_click=lambda e: start_quiz(3),
-            shadow=ft.BoxShadow(blur_radius=4, color="#00000015"),
-        )
+        card_l1 = ft.Container(content=ft.Column(controls=[ft.Icon(ft.Icons.LOOKS_ONE, size=40, color="#00A896"), ft.Text("Тест L1", size=18, weight=ft.FontWeight.BOLD), ft.Text("Базовые знания", size=12, color="#666666")], horizontal_alignment=ft.CrossAxisAlignment.CENTER), bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=140, on_click=lambda e: start_quiz(1), shadow=ft.BoxShadow(blur_radius=4, color="#00000015"))
+        card_l2 = ft.Container(content=ft.Column(controls=[ft.Icon(ft.Icons.LOOKS_TWO, size=40, color="#5A00FF"), ft.Text("Тест L2", size=18, weight=ft.FontWeight.BOLD), ft.Text("Сетевые технологии", size=12, color="#666666")], horizontal_alignment=ft.CrossAxisAlignment.CENTER), bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=140, on_click=lambda e: start_quiz(2), shadow=ft.BoxShadow(blur_radius=4, color="#00000015"))
+        card_l3 = ft.Container(content=ft.Column(controls=[ft.Icon(ft.Icons.LOOKS_3, size=40, color="#E63946"), ft.Text("Тест L3", size=18, weight=ft.FontWeight.BOLD), ft.Text("Инфраструктура", size=12, color="#666666")], horizontal_alignment=ft.CrossAxisAlignment.CENTER), bgcolor="#FFFFFF", padding=20, border_radius=14, width=160, height=140, on_click=lambda e: start_quiz(3), shadow=ft.BoxShadow(blur_radius=4, color="#00000015"))
 
         self.container.content = ft.Column(
             controls=[
                 ft.Text("Выберите уровень теста", size=22, weight=ft.FontWeight.BOLD),
                 ft.Container(height=20),
                 ft.Row(controls=[card_l1, card_l2, card_l3], alignment=ft.MainAxisAlignment.CENTER, spacing=20, wrap=True),
-                ft.Text("Каждый тест содержит 20 случайных вопросов для выбранного уровня.", size=12, color="#666666"),
+                ft.Text("Каждый тест содержит 20 случайных вопросов.", size=12, color="#666666"),
             ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            alignment=ft.MainAxisAlignment.CENTER,
-            expand=True,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, expand=True,
         )
         return self.container
