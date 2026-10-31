@@ -13,7 +13,7 @@ from app.ui.progress import ProgressScreen
 from app.ui.profile import ProfileScreen
 from app.ui.about import AboutScreen
 from app.ui.quiz import QuizScreen
-from app.ui.terminal import TerminalScreen  # Импортируем экран терминала
+from app.ui.terminal import TerminalScreen
 from app.ui.theme_colors import (
     text_primary, text_secondary, text_accent, text_error, bg_primary, bg_card, bg_card_alt
 )
@@ -54,6 +54,27 @@ def build_background() -> ft.Control:
 async def main(page: ft.Page):
     page.title = "SupportDesk Mobile"
     
+    # --- НАСТРОЙКА СОВРЕМЕННОЙ ТЕМЫ ---
+    page.fonts = {
+        "Inter": "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf"
+    }
+    page.theme = ft.Theme(
+        font_family="Inter",
+        color_scheme=ft.ColorScheme(
+            primary="#5A00FF",
+            secondary="#00A896",
+        ),
+        visual_density=ft.VisualDensity.COMFORTABLE,
+    )
+    page.dark_theme = ft.Theme(
+        font_family="Inter",
+        color_scheme=ft.ColorScheme(
+            primary="#B388FF",
+            secondary="#69DB7C",
+        ),
+        visual_density=ft.VisualDensity.COMFORTABLE,
+    )
+
     is_dark = await load_theme()
     if is_dark:
         page.theme_mode = ft.ThemeMode.DARK
@@ -85,7 +106,6 @@ async def main(page: ft.Page):
         page.update()
 
     def show_profile_screen():
-        # ИСПРАВЛЕНИЕ: Убрали border_color и focused_border_color
         name_input = ft.TextField(
             label="Ваше имя", 
             hint_text="Например, Александр", 
@@ -93,7 +113,8 @@ async def main(page: ft.Page):
             autofocus=True, 
             border=ft.InputBorder.OUTLINE,
             color=text_primary(page),
-            label_style=ft.TextStyle(color=text_secondary(page))
+            label_style=ft.TextStyle(color=text_secondary(page)),
+            border_radius=12,
         )
 
         async def save_and_continue(e):
@@ -107,7 +128,14 @@ async def main(page: ft.Page):
             await save_profile(name)
             page.run_task(show_main_screen)
 
-        save_btn = ft.Button(content=ft.Text("Сохранить и продолжить", color=ft.Colors.WHITE), bgcolor="#5A00FF", on_click=save_and_continue, width=300, height=45)
+        save_btn = ft.Button(
+            content=ft.Text("Сохранить и продолжить", color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD), 
+            bgcolor="#5A00FF", 
+            on_click=save_and_continue, 
+            width=300, 
+            height=50,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
+        )
 
         screen = ft.Column(
             controls=[
@@ -195,9 +223,10 @@ async def main(page: ft.Page):
                     ],
                     spacing=15,
                 ),
-                bgcolor=bg_card(page), border_radius=14, padding=ft.Padding.symmetric(vertical=15, horizontal=20),
+                bgcolor=bg_card(page), border_radius=16, padding=ft.Padding.symmetric(vertical=15, horizontal=20),
                 col={"xs": 12, "sm": 6},
-                on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
+                on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=10, color="#00000015", offset=ft.Offset(0, 4)),
+                ink=True,
             )
             return card
 
