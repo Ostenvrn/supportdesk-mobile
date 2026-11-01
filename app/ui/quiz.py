@@ -1,7 +1,6 @@
 # app/ui/quiz.py
 #
 # Экран тестирования (L1, L2, L3).
-# С разбором ошибок и объяснением правильных ответов.
 
 import json
 import random
@@ -21,11 +20,9 @@ class QuizScreen:
         self.questions = self._load_questions()
         self.current_idx = 0
         self.correct_answers = 0
-        self.answers_history = [] # Список для хранения {"question": q, "user_idx": int, "is_correct": bool}
-
+        self.answers_history = []
         self.timer_seconds = 0
         self.timer_running = True
-
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.timer_text = None
 
@@ -62,6 +59,28 @@ class QuizScreen:
                     self.page.update()
                 threading.Timer(1.0, tick).start()
         threading.Timer(1.0, tick).start()
+
+    # === ПЕРЕХВАТ КНОПКИ НАЗАД ===
+    def _on_back_click(self, e):
+        if self.timer_running:
+            # Тест еще идет, спрашиваем подтверждение
+            def do_exit(e):
+                self.timer_running = False # Останавливаем таймер
+                self.page.pop_dialog()
+                self.on_back()
+
+            dialog = ft.AlertDialog(
+                title=ft.Text("Выйти из теста?"),
+                content=ft.Text("Весь текущий прогресс теста будет потерян. Вы уверены?"),
+                actions=[
+                    ft.TextButton("Отмена", on_click=lambda _: self.page.pop_dialog()),
+                    ft.Button(content=ft.Text("Выйти"), bgcolor="#E63946", color="#FFFFFF", on_click=do_exit),
+                ],
+            )
+            self.page.show_dialog(dialog)
+        else:
+            # Тест уже завершен, выходим сразу
+            self.on_back()
 
     def _show_question(self):
         if self.current_idx >= len(self.questions):
@@ -116,14 +135,22 @@ class QuizScreen:
             shadow=ft.BoxShadow(blur_radius=6, color="#00000015"),
         )
 
-        self.container.content = card
+        back_btn = ft.TextButton(
+            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
+            on_click=self._on_back_click  # <--- Привязываем перехватчик
+        )
+
+        self.container.content = ft.Column(
+            controls=[card, ft.Container(height=20), ft.Row([back_btn], alignment=ft.MainAxisAlignment.CENTER)],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=True,
+        )
         self.page.update()
 
     def _on_answer(self, answer_idx: int):
         q = self.questions[self.current_idx]
         is_correct = (answer_idx == q["correct"])
         
-        # Сохраняем в историю
         self.answers_history.append({
             "question_data": q,
             "user_idx": answer_idx,
@@ -143,7 +170,7 @@ class QuizScreen:
         self._show_question()
 
     def _show_results(self):
-        self.timer_running = False
+        self.timer_running = False # Останавливаем таймер, тест завершен
 
         async def save_result():
             await save_quiz_result(self.level, self.correct_answers, len(self.questions), self.timer_seconds)
@@ -165,9 +192,7 @@ class QuizScreen:
 
         score_percent = int((self.correct_answers / len(self.questions)) * 100)
 
-        # --- Собираем блок разбора ошибок ---
         review_controls = []
-        
         for idx, history in enumerate(self.answers_history):
             if not history["is_correct"]:
                 q = history["question_data"]
@@ -240,7 +265,7 @@ class QuizScreen:
             bgcolor="#5A00FF",
             width=300,
             height=50,
-            on_click=lambda e: self.on_back(),
+            on_click=lambda e: self.on_back(), # Тест завершен, выходим без предупреждения
         )
 
         self.container.content = ft.Column(
