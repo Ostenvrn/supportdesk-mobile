@@ -3,7 +3,7 @@
 # Система достижений (ачивок).
 
 import flet as ft
-
+from datetime import datetime # Перенесли импорт наверх для тестов
 
 ALL_ACHIEVEMENTS = [
     # Базовые
@@ -61,8 +61,9 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
     earned_ids = [a["id"] for a in earned]
     new_achievements = []
 
-    all_cases = {k: v for k, v in progress.items() if not k.startswith("__")}
-    solved_count = len(all_cases)
+    # Считаем заявки (исключая текущую, если она уже там, чтобы не было двойного счета)
+    all_cases = {k: v for k, v in progress.items() if not k.startswith("__") and k != current_case.get("id")}
+    solved_count = len(all_cases) + 1 # +1 за текущую заявку
 
     if solved_count >= 1 and "first_blood" not in earned_ids: new_achievements.append(_get_ach_by_id("first_blood"))
     if time_spent < 60 and "speed_demon" not in earned_ids: new_achievements.append(_get_ach_by_id("speed_demon"))
@@ -76,6 +77,10 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
         if isinstance(v, dict):
             topic = v.get("topic", "unknown")
             topic_counts[topic] = topic_counts.get(topic, 0) + 1
+            
+    # Добавляем текущую заявку в статистику тем
+    current_topic = current_case.get("topic", "unknown")
+    topic_counts[current_topic] = topic_counts.get(current_topic, 0) + 1
 
     if topic_counts.get("gov", 0) >= 3 and "gov_master" not in earned_ids: new_achievements.append(_get_ach_by_id("gov_master"))
     if topic_counts.get("internet", 0) >= 5 and "net_guru" not in earned_ids: new_achievements.append(_get_ach_by_id("net_guru"))
@@ -89,6 +94,7 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
     if errors_count == 0 and "perfect_run" not in earned_ids:
         if current_case.get("advanced"): new_achievements.append(_get_ach_by_id("perfect_run"))
     if errors_count >= 5 and "survivor" not in earned_ids: new_achievements.append(_get_ach_by_id("survivor"))
+    
     if errors_count == 0:
         no_error_streak = 0
         for k, v in all_cases.items():
@@ -97,7 +103,6 @@ async def check_achievements(progress: dict, current_case: dict, time_spent: int
         if no_error_streak >= 2 and "fast_learner" not in earned_ids: new_achievements.append(_get_ach_by_id("fast_learner"))
         if no_error_streak >= 4 and "marathon" not in earned_ids: new_achievements.append(_get_ach_by_id("marathon"))
 
-    from datetime import datetime
     now = datetime.now()
     if now.hour >= 0 and now.hour < 6 and "night_shift" not in earned_ids: new_achievements.append(_get_ach_by_id("night_shift"))
     if now.hour >= 6 and now.hour < 9 and "early_bird" not in earned_ids: new_achievements.append(_get_ach_by_id("early_bird"))
