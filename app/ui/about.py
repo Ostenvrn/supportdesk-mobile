@@ -1,10 +1,10 @@
 # app/ui/about.py
 #
-# Экран "О программе" с соглашением и дисклеймером.
+# Экран "О программе" с соглашением.
 
 import flet as ft
 from app.state import APP_VERSION
-from app.ui.theme_colors import text_primary, text_secondary, text_accent, text_error
+from app.ui.theme_colors import text_primary, text_secondary, text_accent, text_error, bg_card
 
 
 class AboutScreen:
@@ -14,31 +14,64 @@ class AboutScreen:
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
-        # Функция для показа пользовательского соглашения
         def show_agreement(e):
-            agreement_text = (
-                "ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ\n\n"
-                "1. Настоящее приложение является исключительно обучающим тренажёром.\n"
-                "2. Все данные (имена, адреса, номера заявок, IP-адреса) являются вымышленными. "
-                "Любые совпадения с реальными людьми или организациями случайны.\n"
-                "3. Приложение не собирает, не хранит и не передает персональные данные третьим лицам. "
-                "Вся информация (имя профиля, прогресс) хранится локально на вашем устройстве.\n"
-                "4. Приложение не выполняет реальных сетевых запросов к оборудованию провайдеров."
-            )
+            # Определяем цвета в зависимости от темы
+            dialog_bg = "#FFFFFF" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#1E1E1E"
+            dialog_text = "#333333" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#E0E0E0"
+            dialog_subtext = "#666666" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#AAAAAA"
+
+            # Формируем пункты соглашения
+            items = [
+                (ft.Icons.SCHOOL, "1. Обучающий тренажёр", "Настоящее приложение является исключительно обучающим тренажёром для инженеров поддержки."),
+                (ft.Icons.DATA_OBJECT, "2. Вымышленные данные", "Все данные (имена, адреса, номера заявок, IP-адреса) являются вымышленными. Любые совпадения с реальными людьми или организациями случайны."),
+                (ft.Icons.SECURITY, "3. Конфиденциальность", "Приложение не собирает и не передает персональные данные третьим лицам. Вся информация (имя профиля, прогресс) хранится только локально на вашем устройстве."),
+                (ft.Icons.WIFI_OFF, "4. Нет реальных запросов", "Приложение не выполняет реальных сетевых запросов к оборудованию провайдеров. Все команды эмулируются внутри приложения."),
+            ]
+
+            content_controls = []
+            for icon, title, desc in items:
+                content_controls.append(
+                    ft.Column(
+                        controls=[
+                            ft.Row(controls=[
+                                ft.Icon(icon, color="#5A00FF" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#B388FF", size=24),
+                                ft.Text(title, weight=ft.FontWeight.BOLD, color=dialog_text, size=16)
+                            ], spacing=10),
+                            ft.Text(desc, size=14, color=dialog_subtext),
+                            ft.Divider(height=10, color="transparent"),
+                        ],
+                        spacing=5
+                    )
+                )
 
             dialog = ft.AlertDialog(
-                title=ft.Text("Пользовательское соглашение", color=text_primary(self.page)),
+                title=ft.Text("Пользовательское соглашение", color=dialog_text, weight=ft.FontWeight.BOLD, size=20),
                 content=ft.Container(
-                    content=ft.Text(agreement_text, size=14, color=text_primary(self.page)),
-                    width=400,
-                    padding=10,
+                    content=ft.Column(
+                        controls=content_controls,
+                        scroll=ft.ScrollMode.AUTO,
+                        spacing=10,
+                    ),
+                    width=500,
+                    height=400,
                 ),
-                bgcolor=text_secondary(self.page) if self.page.theme_mode == ft.ThemeMode.LIGHT else "#1E1E1E",
+                bgcolor=dialog_bg,
+                shape=ft.RoundedRectangleBorder(radius=16),
                 actions=[
-                    ft.TextButton("Закрыть", on_click=lambda _: self.page.pop_dialog(), style=ft.ButtonStyle(color=text_accent(self.page)))
+                    ft.Button(
+                        content=ft.Text("Понятно", color="#FFFFFF", weight=ft.FontWeight.BOLD),
+                        bgcolor="#5A00FF",
+                        on_click=lambda _: self.page.pop_dialog(),
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
+                    )
                 ],
             )
             self.page.show_dialog(dialog)
+
+        def show_rustore_info(e):
+            self.page.snack_bar = ft.SnackBar(ft.Text("Ссылка на RuStore появится после прохождения модерации!"))
+            self.page.snack_bar.open = True
+            self.page.update()
 
         self.container.content = ft.Column(
             controls=[
@@ -60,8 +93,8 @@ class AboutScreen:
                 ft.Container(height=10),
                 ft.Container(
                     content=ft.Text(
-                        "⚠️ Внимание: это тренажёр. Все имена, адреса и ситуации вымышлены, "
-                        "любые совпадения случайны. Приложение не выполняет реальных сетевых запросов.",
+                        "⚠️ Внимание: это тренажёр. Все имена, адреса и ситуации вымышлены. "
+                        "Приложение не выполняет реальных сетевых запросов.",
                         size=12,
                         color=text_error(self.page),
                         text_align=ft.TextAlign.CENTER,
@@ -71,6 +104,22 @@ class AboutScreen:
                     border_radius=8,
                     width=350,
                 ),
+                ft.Container(height=20),
+                
+                # --- Ссылки (оставлен только RuStore) ---
+                ft.Text("Полезные ссылки:", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
+                ft.Row(
+                    controls=[
+                        ft.IconButton(
+                            icon=ft.Icons.SHOP,
+                            icon_color=text_accent(self.page),
+                            tooltip="RuStore (скоро)",
+                            on_click=show_rustore_info
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+
                 ft.Container(height=20),
                 ft.TextButton(
                     content=ft.Row(
