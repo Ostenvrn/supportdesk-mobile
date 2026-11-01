@@ -9,8 +9,8 @@ from app.ui.theme_colors import text_primary, text_secondary, text_accent, text_
 class ProfileScreen:
     def __init__(self, page: ft.Page, on_show_progress=None, on_profile_reset=None):
         self.page = page
-        self.on_show_progress = on_show_progress # Функция перехода в прогресс
-        self.on_profile_reset = on_profile_reset # Функция, которая вызывается после сброса (чтобы вернуть на главную)
+        self.on_show_progress = on_show_progress
+        self.on_profile_reset = on_profile_reset
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
@@ -62,7 +62,7 @@ class ProfileScreen:
                     ],
                     alignment=ft.MainAxisAlignment.CENTER
                 ),
-                bgcolor="#00A896", # Зеленый цвет
+                bgcolor="#00A896",
                 width=300,
                 height=50,
                 style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
@@ -86,12 +86,10 @@ class ProfileScreen:
         def confirm_change_profile(e):
             def do_change_profile(e):
                 async def _change():
-                    # Сбрасываем только имя
                     state.profile_name = ""
                     state.profile_created = False
                     await save_profile("") 
                     self.page.pop_dialog()
-                    # Вызываем функцию возврата на стартовый экран
                     if self.on_profile_reset:
                         self.on_profile_reset()
                 self.page.run_task(_change)
@@ -114,24 +112,40 @@ class ProfileScreen:
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
         )
 
-        # --- История тестов ---
-        quiz_history_container = ft.Column()
+        # --- История тестов (в виде графиков) ---
+        quiz_history_container = ft.Column(spacing=10)
 
         async def load_history():
             history = await load_quiz_results()
             if not history:
                 quiz_history_container.controls = [ft.Text("Вы ещё не проходили тесты.", color=text_secondary(self.page), italic=True)]
             else:
-                for res in reversed(history[-5:]):
+                for res in reversed(history[-5:]): # Берем последние 5
+                    correct = res['correct']
+                    total = res['total']
+                    percent = int((correct / total) * 100)
+                    is_passed = correct >= 15
+                    
+                    bar_color = "#00A896" if is_passed else "#E63946"
+                    
+                    # Прогресс-бар с процентами
+                    bar = ft.ProgressBar(value=correct/total, color=bar_color, bgcolor="#E9ECEF", height=10, border_radius=5)
+                    
                     quiz_history_container.controls.append(
                         ft.Container(
-                            content=ft.Row(
+                            content=ft.Column(
                                 controls=[
-                                    ft.Text(f"L{res['level']}", size=14, weight=ft.FontWeight.BOLD, color=text_accent(self.page)),
-                                    ft.Text(f"{res['date']}", size=12, color=text_secondary(self.page)),
-                                    ft.Container(expand=True),
-                                    ft.Text(f"{res['correct']}/{res['total']}", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
-                                ]
+                                    ft.Row(
+                                        controls=[
+                                            ft.Text(f"L{res['level']}", size=14, weight=ft.FontWeight.BOLD, color=text_accent(self.page)),
+                                            ft.Container(expand=True),
+                                            ft.Text(f"{correct}/{total} ({percent}%)", size=12, weight=ft.FontWeight.BOLD, color=bar_color),
+                                        ]
+                                    ),
+                                    bar,
+                                    ft.Text(f"{res['date']}", size=10, color=text_secondary(self.page)),
+                                ],
+                                spacing=5,
                             ),
                             padding=10,
                             bgcolor=bg_card(self.page),
@@ -151,7 +165,6 @@ class ProfileScreen:
                     state.profile_created = False
                     state.progress = {}
                     self.page.pop_dialog()
-                    # Вызываем функцию возврата на стартовый экран
                     if self.on_profile_reset:
                         self.on_profile_reset()
                 self.page.run_task(_reset)
