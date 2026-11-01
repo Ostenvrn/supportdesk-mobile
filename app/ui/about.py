@@ -1,6 +1,6 @@
 # app/ui/about.py
 #
-# Экран "О программе" с соглашением.
+# Экран "О программе" с соглашением и списком изменений.
 
 import flet as ft
 from app.state import APP_VERSION
@@ -14,13 +14,50 @@ class AboutScreen:
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
+        def show_changelog(e):
+            # === СЮДА ДОБАВЛЯЕМ ИЗМЕНЕНИЯ ПЕРЕД КАЖДЫМ ПУШЕМ ===
+            changes = [
+                "✅ Исправлена системная кнопка «Назад» (приложение больше не закрывается).",
+                "✅ Добавлен индикатор загрузки при переходе между экранами.",
+                "✅ В Справочнике появилась кнопка очистки поиска и дублирующая кнопка возврата внизу статьи.",
+                "✅ В тестах: счетчик правильных ответов и предупреждение при досрочном выходе.",
+                "✅ В терминале: история команд, новые команды, фокус и позиционирование курсора.",
+                "✅ В профиле: счетчик достижений, кнопка смены профиля, график последних тестов.",
+                "✅ Каскадная анимация карточек и плавное закрытие заявок.",
+                "✅ Устранено мерцание темы при запуске приложения.",
+            ]
+            
+            changelog_content = ft.Column(
+                controls=[ft.Text(change, size=13, color=text_primary(self.page)) for change in changes],
+                spacing=8,
+            )
+            
+            dialog = ft.AlertDialog(
+                title=ft.Text(f"Что нового в {APP_VERSION}?", color=text_primary(self.page), weight=ft.FontWeight.BOLD),
+                content=ft.Container(
+                    content=ft.Column([changelog_content], scroll=ft.ScrollMode.AUTO),
+                    width=500,
+                    height=400,
+                    padding=10,
+                ),
+                bgcolor=bg_card(self.page),
+                shape=ft.RoundedRectangleBorder(radius=16),
+                actions=[
+                    ft.Button(
+                        content=ft.Text("Круто!", color="#FFFFFF"),
+                        bgcolor="#5A00FF",
+                        on_click=lambda _: self.page.pop_dialog(),
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
+                    )
+                ],
+            )
+            self.page.show_dialog(dialog)
+
         def show_agreement(e):
-            # Определяем цвета в зависимости от темы
             dialog_bg = "#FFFFFF" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#1E1E1E"
             dialog_text = "#333333" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#E0E0E0"
             dialog_subtext = "#666666" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#AAAAAA"
 
-            # Формируем пункты соглашения
             items = [
                 (ft.Icons.SCHOOL, "1. Обучающий тренажёр", "Настоящее приложение является исключительно обучающим тренажёром для инженеров поддержки."),
                 (ft.Icons.DATA_OBJECT, "2. Вымышленные данные", "Все данные (имена, адреса, номера заявок, IP-адреса) являются вымышленными. Любые совпадения с реальными людьми или организациями случайны."),
@@ -47,11 +84,7 @@ class AboutScreen:
             dialog = ft.AlertDialog(
                 title=ft.Text("Пользовательское соглашение", color=dialog_text, weight=ft.FontWeight.BOLD, size=20),
                 content=ft.Container(
-                    content=ft.Column(
-                        controls=content_controls,
-                        scroll=ft.ScrollMode.AUTO,
-                        spacing=10,
-                    ),
+                    content=ft.Column(controls=content_controls, scroll=ft.ScrollMode.AUTO, spacing=10),
                     width=500,
                     height=400,
                 ),
@@ -106,7 +139,7 @@ class AboutScreen:
                 ),
                 ft.Container(height=20),
                 
-                # --- Ссылки (оставлен только RuStore) ---
+                # --- Ссылки ---
                 ft.Text("Полезные ссылки:", size=14, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                 ft.Row(
                     controls=[
@@ -123,10 +156,14 @@ class AboutScreen:
                 ft.Container(height=20),
                 ft.TextButton(
                     content=ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.DESCRIPTION, color=text_accent(self.page)),
-                            ft.Text("Пользовательское соглашение", color=text_accent(self.page)),
-                        ],
+                        controls=[ft.Icon(ft.Icons.NEW_RELEASES, color=text_accent(self.page)), ft.Text(f"Что нового в {APP_VERSION}?", color=text_accent(self.page))],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    on_click=show_changelog,
+                ),
+                ft.TextButton(
+                    content=ft.Row(
+                        controls=[ft.Icon(ft.Icons.DESCRIPTION, color=text_accent(self.page)), ft.Text("Пользовательское соглашение", color=text_accent(self.page))],
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
                     on_click=show_agreement,
