@@ -54,7 +54,13 @@ class TerminalScreen:
 
         console_container = ft.Container(content=self.output_list, bgcolor="#000000", border_radius=8, expand=True)
 
-        self.input_field = ft.TextField(hint_text="Введите команду...", expand=True, autofocus=True, text_style=ft.TextStyle(font_family="Courier New", size=13), on_submit=self._on_command_submit)
+        self.input_field = ft.TextField(
+            hint_text="Введите команду...", 
+            expand=True, 
+            autofocus=True, 
+            text_style=ft.TextStyle(font_family="Courier New", size=13), 
+            on_submit=self._on_command_submit
+        )
 
         run_button = ft.Button(content=ft.Text("Выполнить", color="#FFFFFF"), bgcolor="#5A00FF", on_click=self._on_command_submit)
 
@@ -118,6 +124,9 @@ class TerminalScreen:
         if self.history_index > 0: self.history_index -= 1
         elif self.history_index == -1: self.history_index = len(self.command_history) - 1
         self.input_field.value = self.command_history[self.history_index]
+        
+        # Безопасная установка курсора в конец
+        self.input_field.selection = ft.TextSelection(base_offset=-1, extent_offset=-1)
         self.page.update()
 
     def _on_history_down(self, e):
@@ -128,16 +137,23 @@ class TerminalScreen:
         else:
             self.history_index = -1
             self.input_field.value = ""
+            
+        self.input_field.selection = ft.TextSelection(base_offset=-1, extent_offset=-1)
         self.page.update()
 
     def _on_chip_click(self, command: str):
         if self.input_field is not None:
             self.input_field.value = command
+            # Ставим курсор в конец текста
+            self.input_field.selection = ft.TextSelection(base_offset=-1, extent_offset=-1)
+            self.input_field.focus()
             self.page.update()
 
     def _on_random_click(self, e):
         if self.input_field is not None:
             self.input_field.value = random.choice(EXAMPLE_COMMANDS)
+            self.input_field.selection = ft.TextSelection(base_offset=-1, extent_offset=-1)
+            self.input_field.focus()
             self.page.update()
 
     def _on_copy_click(self, e):
