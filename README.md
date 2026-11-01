@@ -64,7 +64,7 @@
 3. Установи зависимости:
    pip install -r requirements.txt
 4. Запусти приложение:
-   python app.py
+   python main.py
 
 ## 👨‍💻 Автор
 Чернов Александр
