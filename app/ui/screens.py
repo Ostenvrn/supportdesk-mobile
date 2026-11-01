@@ -12,28 +12,40 @@ class KnowledgeScreen:
         self.container = ft.Container(expand=True)
         self.search_results_container = ft.Column(visible=False, expand=True)
         self.categories_container = ft.Column(expand=True)
+        self.search_input = None # Сохраняем ссылку на поле поиска
 
     def build(self) -> ft.Control:
         self.show_categories()
-        search_input = ft.TextField(
+
+        # Создаем поле поиска и сохраняем ссылку
+        self.search_input = ft.TextField(
             hint_text="Поиск по справочнику...",
             prefix_icon=ft.Icons.SEARCH,
             border_radius=10,
-            bgcolor="#FFFFFF",
+            bgcolor="#FFFFFF" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#2D2D2D",
+            color="#333333" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#FFFFFF",
             height=50,
             on_change=self._on_search_change,
+            suffix_icon=ft.IconButton(
+                icon=ft.Icons.CLEAR,
+                icon_color="#666666" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#AAAAAA",
+                tooltip="Очистить поиск",
+                on_click=self._clear_search,
+                visible=False # Скрыт по умолчанию
+            )
         )
+
         return ft.Column(
             controls=[
                 ft.Row(
                     controls=[
                         ft.Icon(icon=ft.Icons.MENU_BOOK, color="#5A00FF", size=28),
-                        ft.Text("Справочник", size=22, weight=ft.FontWeight.BOLD, color="#333333"),
+                        ft.Text("Справочник", size=22, weight=ft.FontWeight.BOLD, color="#333333" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#FFFFFF"),
                     ],
                     spacing=10,
                 ),
                 ft.Container(height=10),
-                search_input,
+                self.search_input,
                 ft.Container(height=15),
                 self.search_results_container,
                 self.categories_container,
@@ -41,17 +53,34 @@ class KnowledgeScreen:
             expand=True,
         )
 
+    def _clear_search(self, e):
+        """Очищает поле поиска и возвращает список категорий."""
+        if self.search_input:
+            self.search_input.value = ""
+            self.search_input.suffix_icon.visible = False
+            self._on_search_change(None) # Принудительно обновляем поиск
+            self.page.update()
+
     def _on_search_change(self, e):
-        query = e.control.value.strip()
+        if not self.search_input:
+            return
+            
+        query = self.search_input.value.strip()
+        
+        # Показываем/скрываем крестик очистки
+        self.search_input.suffix_icon.visible = bool(query)
+        
         if not query:
             self.search_results_container.visible = False
             self.categories_container.visible = True
             self.page.update()
             return
+
         results = search_knowledge(query)
         self.categories_container.visible = False
         self.search_results_container.visible = True
         self.search_results_container.controls.clear()
+        
         if not results:
             self.search_results_container.controls.append(ft.Text("Ничего не найдено.", color="#666666", italic=True))
         else:
