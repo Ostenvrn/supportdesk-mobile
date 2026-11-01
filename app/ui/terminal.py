@@ -70,6 +70,15 @@ class TerminalScreen:
         copy_button = ft.IconButton(icon=ft.Icons.COPY, tooltip="Скопировать весь вывод", on_click=self._on_copy_click)
         clear_button = ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, tooltip="Очистить экран (cls)", on_click=self._on_clear_click)
         random_button = ft.IconButton(icon=ft.Icons.CASINO, tooltip="Случайная команда", on_click=self._on_random_click)
+        
+        # Новая кнопка очистки истории
+        clear_history_btn = ft.IconButton(
+            icon=ft.Icons.CLEANING_SERVICES, 
+            tooltip="Очистить историю команд (стрелки)", 
+            on_click=self._on_clear_history_click,
+            icon_color=text_primary(self.page)
+        )
+        
         back_button = ft.TextButton(content=ft.Text("← Назад"), on_click=self._on_back_click)
 
         chips_row = ft.Row(controls=[self._make_chip(cmd) for cmd in EXAMPLE_COMMANDS], spacing=8, scroll=ft.ScrollMode.AUTO)
@@ -86,7 +95,9 @@ class TerminalScreen:
         )
 
         input_row = ft.Row(controls=[history_up_btn, history_down_btn, self.input_field, run_button], spacing=5)
-        bottom_row = ft.Row(controls=[back_button, random_button, copy_button, clear_button], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        
+        # Добавили clear_history_btn в нижнюю панель
+        bottom_row = ft.Row(controls=[back_button, random_button, clear_history_btn, copy_button, clear_button], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
         self.container.content = ft.Column(controls=[warning, console_container, chips_row, input_row, bottom_row], spacing=10, expand=True)
         self.container.padding = 10
@@ -119,13 +130,19 @@ class TerminalScreen:
             print(f"Ошибка загрузки счётчика: {e}")
             self.session_command_count = 0
 
+    def _on_clear_history_click(self, e):
+        """Очищает историю команд (не сам экран)."""
+        self.command_history.clear()
+        self.history_index = -1
+        self.page.snack_bar = ft.SnackBar(ft.Text("История команд очищена"), duration=1500)
+        self.page.snack_bar.open = True
+        self.page.update()
+
     def _on_history_up(self, e):
         if not self.command_history: return
         if self.history_index > 0: self.history_index -= 1
         elif self.history_index == -1: self.history_index = len(self.command_history) - 1
         self.input_field.value = self.command_history[self.history_index]
-        
-        # Безопасная установка курсора в конец
         self.input_field.selection = ft.TextSelection(base_offset=-1, extent_offset=-1)
         self.page.update()
 
@@ -144,7 +161,6 @@ class TerminalScreen:
     def _on_chip_click(self, command: str):
         if self.input_field is not None:
             self.input_field.value = command
-            # Ставим курсор в конец текста
             self.input_field.selection = ft.TextSelection(base_offset=-1, extent_offset=-1)
             self.input_field.focus()
             self.page.update()
