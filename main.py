@@ -55,6 +55,15 @@ def build_background() -> ft.Control:
 async def main(page: ft.Page):
     page.title = "SupportDesk Mobile"
     
+    # === ЗАГРУЗКА ТЕМЫ И НАСТРОЕК ДО ОТРИСОВКИ ЭКРАНА ===
+    is_dark = await load_theme()
+    if is_dark:
+        page.theme_mode = ft.ThemeMode.DARK
+        page.bgcolor = "#121212" # Темный фон
+    else:
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.bgcolor = "#F4F6F9" # Светлый фон
+
     page.fonts = {
         "Inter": "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf"
     }
@@ -68,14 +77,6 @@ async def main(page: ft.Page):
         color_scheme=ft.ColorScheme(primary="#B388FF", secondary="#69DB7C"),
         visual_density=ft.VisualDensity.COMFORTABLE,
     )
-
-    is_dark = await load_theme()
-    if is_dark:
-        page.theme_mode = ft.ThemeMode.DARK
-        page.bgcolor = bg_primary(page)
-    else:
-        page.theme_mode = ft.ThemeMode.LIGHT
-        page.bgcolor = bg_primary(page)
 
     page.padding = 20
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
@@ -157,18 +158,16 @@ async def main(page: ft.Page):
         )
         set_screen(screen, "profile")
 
-    # Список для хранения ссылок на карточки, чтобы анимировать их
     card_controls_list = []
 
     async def animate_cards():
-        """Плавно показывает карточки одну за другой."""
         for card in card_controls_list:
-            await asyncio.sleep(0.05) # Небольшая задержка
+            await asyncio.sleep(0.05)
             card.opacity = 1.0
             page.update()
 
     async def show_main_screen():
-        card_controls_list.clear() # Очищаем перед новым показом
+        card_controls_list.clear()
         
         progress = await load_progress()
         solved_count = len([k for k in progress.keys() if not k.startswith("__")])
@@ -251,10 +250,10 @@ async def main(page: ft.Page):
                 col={"xs": 12, "sm": 6},
                 on_click=lambda e: open_section(section), shadow=ft.BoxShadow(blur_radius=10, color="#00000015", offset=ft.Offset(0, 4)),
                 ink=True,
-                opacity=0, # Начальная прозрачность
-                animate_opacity=ft.Animation(duration=300, curve=ft.AnimationCurve.EASE_IN_OUT) # Анимация
+                opacity=0,
+                animate_opacity=ft.Animation(duration=300, curve=ft.AnimationCurve.EASE_IN_OUT)
             )
-            card_controls_list.append(card) # Добавляем в список для анимации
+            card_controls_list.append(card)
             return card
 
         cards_column = ft.ResponsiveRow(
@@ -282,7 +281,6 @@ async def main(page: ft.Page):
         main_screen = ft.Stack(controls=[build_background(), ft.Container(content=content_column, expand=True, alignment=ft.Alignment.CENTER)], expand=True)
         set_screen(main_screen, "main")
         
-        # Запускаем анимацию карточек после того, как экран установлен
         page.run_task(animate_cards)
 
     page.add(switcher)
