@@ -7,9 +7,10 @@ from app.ui.theme_colors import text_primary, text_secondary, text_accent, text_
 
 
 class ProfileScreen:
-    def __init__(self, page: ft.Page, on_show_progress=None):
+    def __init__(self, page: ft.Page, on_show_progress=None, on_profile_reset=None):
         self.page = page
         self.on_show_progress = on_show_progress # Функция перехода в прогресс
+        self.on_profile_reset = on_profile_reset # Функция, которая вызывается после сброса (чтобы вернуть на главную)
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
 
     def build(self) -> ft.Control:
@@ -85,11 +86,14 @@ class ProfileScreen:
         def confirm_change_profile(e):
             def do_change_profile(e):
                 async def _change():
+                    # Сбрасываем только имя
                     state.profile_name = ""
                     state.profile_created = False
                     await save_profile("") 
                     self.page.pop_dialog()
-                    self.page.window.reload()
+                    # Вызываем функцию возврата на стартовый экран
+                    if self.on_profile_reset:
+                        self.on_profile_reset()
                 self.page.run_task(_change)
 
             dialog = ft.AlertDialog(
@@ -147,7 +151,9 @@ class ProfileScreen:
                     state.profile_created = False
                     state.progress = {}
                     self.page.pop_dialog()
-                    self.page.window.reload()
+                    # Вызываем функцию возврата на стартовый экран
+                    if self.on_profile_reset:
+                        self.on_profile_reset()
                 self.page.run_task(_reset)
 
             dialog = ft.AlertDialog(
@@ -202,7 +208,7 @@ class ProfileScreen:
                 success_text,
                 change_profile_btn,
                 ft.Container(height=15),
-                progress_btn, # Кнопка перехода в прогресс
+                progress_btn,
                 ft.Container(height=15),
                 ach_text,
                 ft.Divider(),
