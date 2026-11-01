@@ -12,12 +12,11 @@ class KnowledgeScreen:
         self.container = ft.Container(expand=True)
         self.search_results_container = ft.Column(visible=False, expand=True)
         self.categories_container = ft.Column(expand=True)
-        self.search_input = None # Сохраняем ссылку на поле поиска
+        self.search_input = None
 
     def build(self) -> ft.Control:
         self.show_categories()
 
-        # Создаем поле поиска и сохраняем ссылку
         self.search_input = ft.TextField(
             hint_text="Поиск по справочнику...",
             prefix_icon=ft.Icons.SEARCH,
@@ -31,7 +30,7 @@ class KnowledgeScreen:
                 icon_color="#666666" if self.page.theme_mode == ft.ThemeMode.LIGHT else "#AAAAAA",
                 tooltip="Очистить поиск",
                 on_click=self._clear_search,
-                visible=False # Скрыт по умолчанию
+                visible=False
             )
         )
 
@@ -54,11 +53,10 @@ class KnowledgeScreen:
         )
 
     def _clear_search(self, e):
-        """Очищает поле поиска и возвращает список категорий."""
         if self.search_input:
             self.search_input.value = ""
             self.search_input.suffix_icon.visible = False
-            self._on_search_change(None) # Принудительно обновляем поиск
+            self._on_search_change(None)
             self.page.update()
 
     def _on_search_change(self, e):
@@ -66,8 +64,6 @@ class KnowledgeScreen:
             return
             
         query = self.search_input.value.strip()
-        
-        # Показываем/скрываем крестик очистки
         self.search_input.suffix_icon.visible = bool(query)
         
         if not query:
@@ -179,16 +175,29 @@ class KnowledgeScreen:
         articles = category.get("articles", [])
         if article_idx >= len(articles): return
         article = articles[article_idx]
-        back_btn = ft.TextButton(
+        
+        # Верхняя кнопка назад
+        back_btn_top = ft.TextButton(
             content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text(f"К разделу «{category['name']}»", color="#5A00FF", size=13)], spacing=5),
             on_click=lambda e: self.show_articles(category_id),
         )
+        
+        # Нижняя кнопка назад (дублируется для удобства)
+        back_btn_bottom = ft.TextButton(
+            content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text(f"К разделу «{category['name']}»", color="#5A00FF", size=13)], spacing=5),
+            on_click=lambda e: self.show_articles(category_id),
+        )
+
         self.categories_container.controls = [
-            back_btn,
+            back_btn_top,
             ft.Text(article["title"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
             ft.Container(height=10),
             ft.Column(
-                controls=[ft.Container(content=ft.Text(article["content"], size=14, color="#333333", selectable=True), padding=ft.Padding.all(15), bgcolor="#FFFFFF", border_radius=10)],
+                controls=[
+                    ft.Container(content=ft.Text(article["content"], size=14, color="#333333", selectable=True), padding=ft.Padding.all(15), bgcolor="#FFFFFF", border_radius=10),
+                    ft.Container(height=15),
+                    ft.Row([back_btn_bottom], alignment=ft.MainAxisAlignment.CENTER) # Кнопка внизу
+                ],
                 scroll=ft.ScrollMode.AUTO, expand=True,
             ),
         ]
