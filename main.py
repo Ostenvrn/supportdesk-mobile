@@ -102,6 +102,19 @@ async def main(page: ft.Page):
         switcher.content = control
         page.update()
 
+    def show_loading():
+        """Показывает индикатор загрузки по центру."""
+        loading = ft.Column(
+            controls=[
+                ft.ProgressRing(width=50, height=50, stroke_width=4, color=text_accent(page)),
+                ft.Text("Загрузка...", color=text_secondary(page))
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=True
+        )
+        set_screen(loading, "loading")
+
     def on_view_pop(e):
         if current_screen != "main" and current_screen != "profile":
             page.run_task(show_main_screen)
@@ -151,6 +164,7 @@ async def main(page: ft.Page):
         def open_section(section: str):
             try:
                 if section == "Справочник":
+                    show_loading() # Показываем загрузку
                     body = KnowledgeScreen(page).build()
                     back_btn = ft.TextButton(
                         content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color=text_accent(page)), ft.Text("На главную", color=text_accent(page), size=14)], spacing=5),
@@ -202,6 +216,7 @@ async def main(page: ft.Page):
                     set_screen(ft.Column(controls=[body, ft.Row(controls=[back_btn], alignment=ft.MainAxisAlignment.CENTER)], expand=True), "Тесты")
 
                 elif section == "Прогресс":
+                    show_loading() # Показываем загрузку, пока собирается статистика
                     progress_screen = ProgressScreen(page, on_start_training=lambda: open_section("Тренажёры"))
                     async def load_progress_screen():
                         body = await progress_screen.build()
