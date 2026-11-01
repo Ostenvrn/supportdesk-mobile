@@ -25,6 +25,7 @@ class QuizScreen:
         self.timer_running = True
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.timer_text = None
+        self.score_text = None # Ссылка на счетчик
 
     def _load_questions(self) -> list:
         try:
@@ -60,12 +61,10 @@ class QuizScreen:
                 threading.Timer(1.0, tick).start()
         threading.Timer(1.0, tick).start()
 
-    # === ПЕРЕХВАТ КНОПКИ НАЗАД ===
     def _on_back_click(self, e):
         if self.timer_running:
-            # Тест еще идет, спрашиваем подтверждение
             def do_exit(e):
-                self.timer_running = False # Останавливаем таймер
+                self.timer_running = False
                 self.page.pop_dialog()
                 self.on_back()
 
@@ -79,7 +78,6 @@ class QuizScreen:
             )
             self.page.show_dialog(dialog)
         else:
-            # Тест уже завершен, выходим сразу
             self.on_back()
 
     def _show_question(self):
@@ -88,8 +86,10 @@ class QuizScreen:
             return
 
         q = self.questions[self.current_idx]
-
         progress_text = f"Вопрос {self.current_idx + 1} из {len(self.questions)}"
+        
+        # Счетчик правильных ответов
+        self.score_text = ft.Text(f"✅ {self.correct_answers}", size=14, color="#00A896", weight=ft.FontWeight.BOLD)
         
         self.timer_text = ft.Text(
             f"⏱ {self.timer_seconds // 60:02d}:{self.timer_seconds % 60:02d}",
@@ -115,6 +115,8 @@ class QuizScreen:
                         controls=[
                             ft.Text(progress_text, size=13, color="#666666"),
                             ft.Container(expand=True),
+                            self.score_text, # Выводим счетчик
+                            ft.Container(width=10),
                             self.timer_text,
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -137,7 +139,7 @@ class QuizScreen:
 
         back_btn = ft.TextButton(
             content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text("На главную", color="#5A00FF", size=14)], spacing=5),
-            on_click=self._on_back_click  # <--- Привязываем перехватчик
+            on_click=self._on_back_click
         )
 
         self.container.content = ft.Column(
@@ -170,7 +172,7 @@ class QuizScreen:
         self._show_question()
 
     def _show_results(self):
-        self.timer_running = False # Останавливаем таймер, тест завершен
+        self.timer_running = False
 
         async def save_result():
             await save_quiz_result(self.level, self.correct_answers, len(self.questions), self.timer_seconds)
@@ -265,7 +267,7 @@ class QuizScreen:
             bgcolor="#5A00FF",
             width=300,
             height=50,
-            on_click=lambda e: self.on_back(), # Тест завершен, выходим без предупреждения
+            on_click=lambda e: self.on_back(),
         )
 
         self.container.content = ft.Column(
