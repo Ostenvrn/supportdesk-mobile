@@ -176,16 +176,31 @@ class KnowledgeScreen:
         if article_idx >= len(articles): return
         article = articles[article_idx]
         
-        # Верхняя кнопка назад
+        # Кнопка Назад (вверху)
         back_btn_top = ft.TextButton(
             content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text(f"К разделу «{category['name']}»", color="#5A00FF", size=13)], spacing=5),
             on_click=lambda e: self.show_articles(category_id),
         )
         
-        # Нижняя кнопка назад (дублируется для удобства)
+        # Кнопка Назад (внизу)
         back_btn_bottom = ft.TextButton(
             content=ft.Row(controls=[ft.Icon(icon=ft.Icons.ARROW_BACK, size=18, color="#5A00FF"), ft.Text(f"К разделу «{category['name']}»", color="#5A00FF", size=13)], spacing=5),
             on_click=lambda e: self.show_articles(category_id),
+        )
+
+        # Ссылка на скроллируемый контейнер для кнопки "Наверх"
+        scroll_ref = ft.Ref[ft.Column]()
+
+        def scroll_to_top(e):
+            if scroll_ref.current:
+                scroll_ref.current.scroll_to(offset=0, duration=300)
+
+        # Кнопка Наверх
+        top_btn = ft.IconButton(
+            icon=ft.Icons.ARROW_UPWARD,
+            icon_color="#5A00FF",
+            tooltip="Наверх",
+            on_click=scroll_to_top,
         )
 
         self.categories_container.controls = [
@@ -193,10 +208,11 @@ class KnowledgeScreen:
             ft.Text(article["title"], size=18, weight=ft.FontWeight.BOLD, color="#333333"),
             ft.Container(height=10),
             ft.Column(
+                ref=scroll_ref,
                 controls=[
                     ft.Container(content=ft.Text(article["content"], size=14, color="#333333", selectable=True), padding=ft.Padding.all(15), bgcolor="#FFFFFF", border_radius=10),
                     ft.Container(height=15),
-                    ft.Row([back_btn_bottom], alignment=ft.MainAxisAlignment.CENTER) # Кнопка внизу
+                    ft.Row([top_btn, back_btn_bottom], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), # Кнопки внизу
                 ],
                 scroll=ft.ScrollMode.AUTO, expand=True,
             ),
