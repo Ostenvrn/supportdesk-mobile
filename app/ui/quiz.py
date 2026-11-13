@@ -25,7 +25,7 @@ class QuizScreen:
         self.timer_running = True
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
         self.timer_text = None
-        self.score_text = None # Ссылка на счетчик
+        self.score_text = None
 
     def _load_questions(self) -> list:
         try:
@@ -88,7 +88,6 @@ class QuizScreen:
         q = self.questions[self.current_idx]
         progress_text = f"Вопрос {self.current_idx + 1} из {len(self.questions)}"
         
-        # Счетчик правильных ответов
         self.score_text = ft.Text(f"✅ {self.correct_answers}", size=14, color="#00A896", weight=ft.FontWeight.BOLD)
         
         self.timer_text = ft.Text(
@@ -115,7 +114,7 @@ class QuizScreen:
                         controls=[
                             ft.Text(progress_text, size=13, color="#666666"),
                             ft.Container(expand=True),
-                            self.score_text, # Выводим счетчик
+                            self.score_text,
                             ft.Container(width=10),
                             self.timer_text,
                         ],
@@ -239,6 +238,44 @@ class QuizScreen:
             width=600,
         )
 
+        # --- Функция копирования результата ---
+        def copy_results(e):
+            report = f"Результаты теста SupportDesk (Уровень L{self.level})\n"
+            report += f"Правильных ответов: {self.correct_answers} из {len(self.questions)} ({score_percent}%)\n"
+            report += f"Затраченное время: {mins:02d}:{secs:02d}\n"
+            report += f"Статус: {'СДАН' if passed else 'НЕ СДАН'}\n\n"
+            
+            errors = [h for h in self.answers_history if not h["is_correct"]]
+            if errors:
+                report += "Ошибки:\n"
+                for idx, hist in enumerate(errors):
+                    q = hist["question_data"]
+                    report += f"{idx+1}. {q['question']}\n   Ваш ответ: {q['options'][hist['user_idx']]}\n   Правильно: {q['options'][q['correct']]}\n\n"
+            else:
+                report += "Ошибок нет! Идеальный результат!\n"
+
+            self.page.set_clipboard(report)
+            self.page.snack_bar = ft.SnackBar(ft.Text("Результаты скопированы в буфер обмена!"), bgcolor="#00A896")
+            self.page.snack_bar.open = True
+            self.page.update()
+
+        copy_btn = ft.Button(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.COPY, color="#5A00FF"),
+                    ft.Text("Скопировать результаты", color="#5A00FF", weight=ft.FontWeight.BOLD)
+                ],
+                alignment=ft.MainAxisAlignment.CENTER
+            ),
+            bgcolor="transparent",
+            height=45,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=12),
+                side=ft.BorderSide(1, "#5A00FF")
+            ),
+            on_click=copy_results,
+        )
+
         card = ft.Container(
             content=ft.Column(
                 controls=[
@@ -251,6 +288,8 @@ class QuizScreen:
                     ft.Divider(),
                     ft.Text(f"Проходной балл: 15 из 20", size=14, color="#666666"),
                     ft.Text(f"Затраченное время: {mins:02d}:{secs:02d}", size=14, color="#666666"),
+                    ft.Container(height=15),
+                    copy_btn, # Кнопка копирования
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=10,
