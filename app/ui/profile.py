@@ -2,7 +2,7 @@
 
 import flet as ft
 import app.state as state
-from app.core.storage import save_profile, reset_all_data, load_quiz_results
+from app.core.storage import save_profile, reset_all_data, load_quiz_results, load_progress, save_progress
 from app.ui.theme_colors import text_primary, text_secondary, text_accent, text_error, bg_card
 
 
@@ -12,8 +12,46 @@ class ProfileScreen:
         self.on_show_progress = on_show_progress
         self.on_profile_reset = on_profile_reset
         self.container = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
+        self.avatar_icon = None # Ссылка на иконку
 
     def build(self) -> ft.Control:
+        # Загружаем сохраненный цвет (или используем стандартный)
+        saved_color = "#5A00FF"
+
+        # Создаем иконку профиля
+        self.avatar_icon = ft.Icon(icon=ft.Icons.PERSON, size=80, color=saved_color)
+
+        async def change_color(new_color: str):
+            self.avatar_icon.color = new_color
+            self.page.update()
+            
+            # Сохраняем в прогресс (в специальный ключ)
+            progress = await load_progress()
+            progress["__avatar_color__"] = new_color
+            await save_progress(progress)
+            
+            self.page.snack_bar = ft.SnackBar(ft.Text("Цвет профиля обновлен!"), duration=1000)
+            self.page.snack_bar.open = True
+            self.page.update()
+
+        async def load_saved_color():
+            progress = await load_progress()
+            color = progress.get("__avatar_color__", "#5A00FF")
+            self.avatar_icon.color = color
+            self.page.update()
+
+        self.page.run_task(load_saved_color)
+
+        # Ряд с цветами
+        colors_row = ft.Row(
+            controls=[
+                ft.Container(width=30, height=30, bgcolor=c, border_radius=15, on_click=lambda e, col=c: self.page.run_task(change_color, col), ink=True)
+                for c in ["#5A00FF", "#00A896", "#E63946", "#FFB300", "#0056B3"]
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=10
+        )
+
         name_input = ft.TextField(
             label="Имя пользователя",
             value=state.profile_name,
@@ -71,7 +109,6 @@ class ProfileScreen:
 
         # --- Блок достижений ---
         async def load_achievements_count():
-            from app.core.storage import load_progress
             from app.core.achievements import get_all_achievements
             progress = await load_progress()
             earned = progress.get("__achievements__", [])
@@ -112,7 +149,7 @@ class ProfileScreen:
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
         )
 
-        # --- История тестов (в виде графиков) ---
+        # --- История тестов ---
         quiz_history_container = ft.Column(spacing=10)
 
         async def load_history():
@@ -120,15 +157,13 @@ class ProfileScreen:
             if not history:
                 quiz_history_container.controls = [ft.Text("Вы ещё не проходили тесты.", color=text_secondary(self.page), italic=True)]
             else:
-                for res in reversed(history[-5:]): # Берем последние 5
+                for res in reversed(history[-5:]):
                     correct = res['correct']
                     total = res['total']
                     percent = int((correct / total) * 100)
                     is_passed = correct >= 15
-                    
                     bar_color = "#00A896" if is_passed else "#E63946"
                     
-                    # Прогресс-бар с процентами
                     bar = ft.ProgressBar(value=correct/total, color=bar_color, bgcolor="#E9ECEF", height=10, border_radius=5)
                     
                     quiz_history_container.controls.append(
@@ -212,8 +247,10 @@ class ProfileScreen:
             controls=[
                 ft.Text("Профиль", size=22, weight=ft.FontWeight.BOLD, color=text_primary(self.page)),
                 ft.Container(height=10),
-                ft.Icon(icon=ft.Icons.PERSON, size=80, color=text_accent(self.page)),
-                ft.Container(height=10),
+                self.avatar_icon, # Иконка
+                ft.Container(height=5),
+                colors_row, # Ряд с цветами
+                ft.Container(height=15),
                 name_input,
                 ft.Container(height=10),
                 save_btn,
