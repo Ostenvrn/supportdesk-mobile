@@ -54,6 +54,7 @@ class TerminalScreen:
 
         console_container = ft.Container(content=self.output_list, bgcolor="#000000", border_radius=8, expand=True)
 
+        # В Flet 1.0.5 нет ft.TextInputAction, поэтому убрали этот параметр
         self.input_field = ft.TextField(
             hint_text="Введите команду...", 
             expand=True, 
@@ -215,10 +216,6 @@ class TerminalScreen:
 
         self._add_text_to_console(result)
         self.input_field.value = ""
-        
-        # Скрываем клавиатуру на телефоне
-        self.input_field.blur()
-        
         self.page.update()
 
         if command.lower() not in IGNORED_FOR_COUNTER:

@@ -129,8 +129,16 @@ class AboutScreen:
             )
             self.page.show_dialog(dialog)
 
-        def open_rustore(e):
-            self.page.launch_url("https://www.rustore.ru/catalog/app/com.ostenvrn.supportdesk_mobile")
+        # ИСПРАВЛЕНИЕ: делаем функцию асинхронной
+        async def open_rustore(e):
+            try:
+                # Используем UrlLauncher вместо page.launch_url
+                await ft.UrlLauncher().launch_url("https://www.rustore.ru/catalog/app/com.ostenvrn.supportdesk_mobile")
+            except Exception as ex:
+                print(f"Ошибка при открытии ссылки: {ex}")
+                self.page.snack_bar = ft.SnackBar(ft.Text(f"Не удалось открыть ссылку: {ex}"))
+                self.page.snack_bar.open = True
+                self.page.update()
 
         self.container.content = ft.Column(
             controls=[
@@ -173,7 +181,7 @@ class AboutScreen:
                             icon=ft.Icons.SHOP,
                             icon_color=text_accent(self.page),
                             tooltip="RuStore",
-                            on_click=open_rustore
+                            on_click=lambda e: self.page.run_task(open_rustore, e) # Запускаем асинхронную функцию
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -192,7 +200,7 @@ class AboutScreen:
                         controls=[ft.Icon(ft.Icons.SYSTEM_UPDATE_ALT, color=text_accent(self.page)), ft.Text("Проверить обновления", color=text_accent(self.page))],
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
-                    on_click=open_rustore,
+                    on_click=lambda e: self.page.run_task(open_rustore, e), # Запускаем асинхронную функцию
                 ),
                 ft.TextButton(
                     content=ft.Row(
