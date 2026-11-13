@@ -15,7 +15,6 @@ class AboutScreen:
 
     def build(self) -> ft.Control:
         def show_changelog(e):
-            # === СЮДА ДОБАВЛЯЕМ ИЗМЕНЕНИЯ ПЕРЕД КАЖДЫМ ПУШЕМ ===
             changes = [
                 "✅ Исправлена системная кнопка «Назад» (приложение больше не закрывается).",
                 "✅ Добавлен индикатор загрузки при переходе между экранами.",
@@ -102,7 +101,6 @@ class AboutScreen:
             self.page.show_dialog(dialog)
 
         def open_rustore(e):
-            # Открываем реальную ссылку на RuStore
             self.page.launch_url("https://www.rustore.ru/catalog/app/com.ostenvrn.supportdesk_mobile")
 
         self.container.content = ft.Column(
@@ -146,7 +144,7 @@ class AboutScreen:
                             icon=ft.Icons.SHOP,
                             icon_color=text_accent(self.page),
                             tooltip="RuStore",
-                            on_click=open_rustore # Теперь открывает реальную ссылку
+                            on_click=open_rustore
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -159,6 +157,13 @@ class AboutScreen:
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
                     on_click=show_changelog,
+                ),
+                ft.TextButton(
+                    content=ft.Row(
+                        controls=[ft.Icon(ft.Icons.SYSTEM_UPDATE_ALT, color=text_accent(self.page)), ft.Text("Проверить обновления", color=text_accent(self.page))],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    on_click=open_rustore, # Ведет в RuStore
                 ),
                 ft.TextButton(
                     content=ft.Row(
