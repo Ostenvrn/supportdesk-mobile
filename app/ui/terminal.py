@@ -71,7 +71,6 @@ class TerminalScreen:
         clear_button = ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, tooltip="Очистить экран (cls)", on_click=self._on_clear_click)
         random_button = ft.IconButton(icon=ft.Icons.CASINO, tooltip="Случайная команда", on_click=self._on_random_click)
         
-        # Новая кнопка очистки истории
         clear_history_btn = ft.IconButton(
             icon=ft.Icons.CLEANING_SERVICES, 
             tooltip="Очистить историю команд (стрелки)", 
@@ -96,7 +95,6 @@ class TerminalScreen:
 
         input_row = ft.Row(controls=[history_up_btn, history_down_btn, self.input_field, run_button], spacing=5)
         
-        # Добавили clear_history_btn в нижнюю панель
         bottom_row = ft.Row(controls=[back_button, random_button, clear_history_btn, copy_button, clear_button], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
         self.container.content = ft.Column(controls=[warning, console_container, chips_row, input_row, bottom_row], spacing=10, expand=True)
@@ -131,7 +129,6 @@ class TerminalScreen:
             self.session_command_count = 0
 
     def _on_clear_history_click(self, e):
-        """Очищает историю команд (не сам экран)."""
         self.command_history.clear()
         self.history_index = -1
         self.page.snack_bar = ft.SnackBar(ft.Text("История команд очищена"), duration=1500)
@@ -218,6 +215,10 @@ class TerminalScreen:
 
         self._add_text_to_console(result)
         self.input_field.value = ""
+        
+        # Скрываем клавиатуру на телефоне
+        self.input_field.blur()
+        
         self.page.update()
 
         if command.lower() not in IGNORED_FOR_COUNTER:
