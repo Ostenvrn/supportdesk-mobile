@@ -101,10 +101,9 @@ class AboutScreen:
             )
             self.page.show_dialog(dialog)
 
-        def show_rustore_info(e):
-            self.page.snack_bar = ft.SnackBar(ft.Text("Ссылка на RuStore появится после прохождения модерации!"))
-            self.page.snack_bar.open = True
-            self.page.update()
+        def open_rustore(e):
+            # Открываем реальную ссылку на RuStore
+            self.page.launch_url("https://www.rustore.ru/catalog/app/com.ostenvrn.supportdesk_mobile")
 
         self.container.content = ft.Column(
             controls=[
@@ -146,8 +145,8 @@ class AboutScreen:
                         ft.IconButton(
                             icon=ft.Icons.SHOP,
                             icon_color=text_accent(self.page),
-                            tooltip="RuStore (скоро)",
-                            on_click=show_rustore_info
+                            tooltip="RuStore",
+                            on_click=open_rustore # Теперь открывает реальную ссылку
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
